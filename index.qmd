@@ -32,6 +32,37 @@ submission-score chart) is a live matplotlib cell reading from the small
 cached arrays in `data/` — click "Show the plotting code" on any of them
 to see exactly how it's drawn.
 
+## Summary, before the details
+
+**What we did.** Fine-tuned the VAE with a new ROI-aware connectivity
+loss to fix a disconnected latent space (interpolated latents used to
+decode to garbage; now they don't). Trained this year's checkpoint with
+classifier-free guidance dropout, which last year's didn't have. Spent
+the final week fixing real bugs found only in scored submissions: an
+invisible 256-frame generation ceiling, a seed formula that silently
+produced degenerate candidates regardless of prompt, a quality safety net
+that never actually ran in the deployed container, and a `torch.compile`
+mode that was actively the wrong tool for this workload.
+
+**What we got.** The fine-tuned VAE cuts the reconstruction-vs-interpolation
+FID gap by ~60% (55.6 → 22.5), confirmed both visually and across the
+full validation set. The submission that actually shipped, once every bug
+above was fixed, scores FVD 0.283, FID avg 92.1, and — the number that
+matters most here — CT-CLIPScore avg 43.6, up from ~28–30 on every
+earlier real submission. That CLIP jump is the first real evidence the
+quality safety net does what it was built to do; every earlier number
+we'd quoted for it turned out to be measuring a safety net that had
+silently failed to load.
+
+**What we haven't proven.** Whether classifier-free guidance helps at
+inference time at all (trained for it, swept guidance scale, saw no
+consistent win, don't know why yet). Whether round 2 of the spacing
+fine-tune actually beats round 1 (adopted early, never A/B tested).
+Whether cutting the CLIP-retry seed pool from 5 to 2 holds up at scale
+(worked in the cases we checked before the deadline; not validated
+broadly). Each of these is called out again, with the specific evidence
+we do and don't have, where it comes up below.
+
 ## The architecture, briefly
 
 CTFlow generates a CT volume autoregressively, block by block, in the
@@ -274,8 +305,23 @@ this honestly rather than pretending it was resolved.
 Everything above was settled weeks before the deadline. The last
 stretch was a different kind of work — real-submission debugging under a
 $35-per-run cost and a hard clock, most of it self-inflicted complexity
-we then had to dig back out of. Every point below is a real, scored
-submission, not a local ablation:
+we then had to dig back out of.
+
+One piece of pipeline vocabulary the rest of this section assumes:
+per report, we draw 5 candidate volumes from independent random seeds and
+publish one. **Jerk-median selection** picks the candidate whose z-axis
+jerk (rate of change of motion between slices — a cheap proxy for "does
+this look like a physically plausible scan") is closest to the *median*
+jerk of the group, rather than the highest-scoring one on any single
+metric. The intuition: an unusually low or high jerk candidate is more
+likely to be a genuine artifact (frozen output, motion blur) than a
+lucky sample, so "typical among your own candidates" is a safer default
+than "extreme on the axis you're optimizing." Several of the bugs below
+are specifically about what happens when a step *upstream* of this
+selection — the seeds, the candidate pool, the metric feeding it — goes
+wrong in a way this particular rule doesn't catch.
+
+Every point below is a real, scored submission, not a local ablation:
 
 ```{python}
 #| label: fig-eval-progression
@@ -369,7 +415,9 @@ free — it costs some FVD relative to pure jerk-median selection with no
 quality floor — but it's now provably doing what it was built to do,
 which submission 5 never demonstrated at all.
 
-**The 256-frame ceiling.** Our training data preprocessing center-crops
+### The 256-frame ceiling
+
+Our training data preprocessing center-crops
 every volume to 256 slices. That's an invisible hard boundary: whatever
 the autoregressive model draws past 256 frames, it has *never seen
 anything like it* in training, regardless of prompt. An early real
@@ -378,7 +426,9 @@ wrong with the model, we just let generation run past the one boundary
 that mattered. Capping `max_blocks` at 16 (16×16 = 256 frames) fixed it
 immediately.
 
-**Declared vs. conditioned spacing.** This is a post-processing decoupling,
+### Declared vs. conditioned spacing
+
+This is a post-processing decoupling,
 not a learned conditioning branch — the model itself has no spacing input.
 We found, empirically, that treating the generation as a *coarser*
 z-spacing (3.0mm) than what we actually declare in the output header
@@ -390,25 +440,29 @@ push generation out of a repetitive part of its learned distribution.
 This one small decoupling outperformed every geometry variant we tried
 against the actual challenge FID/FVD metrics.
 
-**When two metrics actively disagree.** Before landing on xy=0.75mm, we
+### When two metrics actively disagree
+
+Before landing on xy=0.75mm, we
 tried declaring the in-plane spacing as exactly 1.0mm (matching the
 champion team's reference config) with the SR adapter doing the
-upsampling. That submission scored the best FVD of the entire cycle
-(0.243) — and the worst FID by a wide margin (565 average, vs. 90–185 on
-every other run; the XZ/YZ planes alone hit 478 and 897). Our working
-theory: the FID evaluator itself resamples every volume to 1.0mm before
-extracting features. Declare exactly 1.0mm and that resample step becomes
-a no-op — whatever slice-to-slice inconsistency the SR adapter
+upsampling. That submission scored 0.243 FVD — essentially tied with the
+0.239 session best — and the worst FID by a wide margin (565 average, vs.
+90–185 on every other run; the XZ/YZ planes alone hit 478 and 897). Our
+working theory: the FID evaluator itself resamples every volume to 1.0mm
+before extracting features. Declare exactly 1.0mm and that resample step
+becomes a no-op — whatever slice-to-slice inconsistency the SR adapter
 introduces passes straight through unfiltered, instead of being smoothed
 out by FID's own preprocessing the way it is for every other spacing we
 declared. FVD uses a different resample target, so it never saw the
 same effect. We reverted to 0.75mm (keeping the adapter) and got both a
-better FID *and* the session's best FVD — but the fact that the single
-best FVD result of the whole cycle came attached to the single worst FID
-result is a good reminder that these metrics measure genuinely different
-things and can move in opposite directions from the same change.
+better FID *and* the cycle's best FVD — but a near-best FVD result
+sitting right next to the single worst FID result is still a good
+reminder that these two metrics measure genuinely different things and
+can move in opposite directions from the same change.
 
-**A selection-method dead end.** We tried scoring candidates by
+### A selection-method dead end
+
+We tried scoring candidates by
 Mahalanobis "typicality" against the published dataset's feature
 distribution and picking the most typical one. It measurably *hurt* FVD
 (0.24 → 0.40) — it shrinks the effective covariance of what gets
@@ -416,7 +470,9 @@ published, making outputs too safe/average relative to real data's actual
 spread. Good reminder that "pick the most normal-looking one" and "match
 the real distribution" are not the same objective.
 
-**A seed bug that only showed up in retrospect.** Our candidate-diversity
+### A seed bug that only showed up in retrospect
+
+Our candidate-diversity
 scheme used seeds of the form `base + 977*k`. For `k = 1..4`, this
 combination deterministically triggered the model's early-stop condition
 on the very first block, *regardless of prompt content* — confirmed by
@@ -427,7 +483,9 @@ catch because the no-ops get filtered out before scoring, so nothing
 looked obviously wrong. We replaced the formula with a small pool of
 seeds individually verified non-degenerate across multiple real prompts.
 
-**A safety net that silently never ran.** We added a CT-CLIP-based
+### A safety net that silently never ran
+
+We added a CT-CLIP-based
 quality check late in the cycle: score the selected candidate against its
 own report text, and if it scores below 0.5, redraw with a backup seed
 pool and take whichever of the combined pool scores highest — a real
@@ -448,7 +506,9 @@ compute spent validating a component that had never actually run once.
 Fixed by pointing that specific line at the local path when it exists,
 falling back to the Hub id otherwise.
 
-**Compile mode was the wrong tool for this workload.** Once the CLIP
+### Compile mode was the wrong tool for this workload
+
+Once the CLIP
 safety net actually started firing, retries meant redrawing at a
 different batch size than the main pass, and every new autoregressive
 block length is technically a new tensor shape. We'd been compiling with

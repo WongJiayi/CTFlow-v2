@@ -17,10 +17,10 @@ jupyter: python3
 This is a retrospective on our second submission to the VLM3D / CT-RATE
 text-to-CT challenge — a text-conditioned generative model that turns a
 radiology report into a synthetic chest CT volume. Last year's system
-worked. This year we went after the two things we thought were actually
+worked. This year we changed the two things we thought were actually
 limiting it — the VAE and classifier-free guidance — and then spent the
-final submission cycle fighting a string of very unglamorous bugs to get
-the result out the door. Both halves are worth writing down.
+final submission cycle finding and fixing a long list of unglamorous bugs
+before the deadline. Both halves are worth writing down.
 
 Links: [model + inference code](https://huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026)
 · [training code](training/) (this repo, no weights)
@@ -90,8 +90,8 @@ two real latents, interpolate between them, decode the midpoint, and you
 often get an anatomically implausible image — ghosting, structural
 artifacts, tissue that doesn't correspond to any real CT. If the
 transformer's flow-matching process has to pass through regions of latent
-space like that on its way from noise to a valid sample, that's a direct
-tax on generation quality.
+space like that on its way from noise to a valid sample, that directly
+hurts generation quality.
 
 We measure this with **interpolated FID (iFID)**, following Xu et al.:
 encode two samples, slerp to the midpoint, decode, and compute FID of the
@@ -134,7 +134,7 @@ $$
 The min (rather than forcing the midpoint to match a pixel-blend of both
 endpoints) just asks that the midpoint stay plausible with respect to
 *at least one* endpoint in the regions that matter — a much easier and
-more honest target than exact interpolation.
+more achievable target than exact interpolation.
 
 Full objective: standard reconstruction (L1 + LPIPS + adversarial) + KL +
 this connectivity term, with two schedules layered on top — KL ramps
@@ -201,8 +201,8 @@ source slices are (see column 4, where $z_j$ is a mostly-empty top-of-lung
 slice). With the **fine-tuned VAE**, the same midpoints look like
 plausible intermediate anatomy: coherent organ boundaries, no grid
 artifacts, structure that's obviously *between* the two endpoints rather
-than a broken average of them. This is the failure mode the connectivity
-loss is directly targeting, made visible.
+than a broken average of them. This is exactly the failure mode the
+connectivity loss targets.
 
 ### Did it work
 
@@ -304,8 +304,8 @@ this honestly rather than pretending it was resolved.
 
 Everything above was settled weeks before the deadline. The last
 stretch was a different kind of work — real-submission debugging under a
-$35-per-run cost and a hard clock, most of it self-inflicted complexity
-we then had to dig back out of.
+$35-per-run cost and a hard deadline, most of it complexity we created
+ourselves and then had to undo.
 
 One piece of pipeline vocabulary the rest of this section assumes:
 per report, we draw 5 candidate volumes from independent random seeds and
@@ -456,9 +456,9 @@ out by FID's own preprocessing the way it is for every other spacing we
 declared. FVD uses a different resample target, so it never saw the
 same effect. We reverted to 0.75mm (keeping the adapter) and got both a
 better FID *and* the cycle's best FVD — but a near-best FVD result
-sitting right next to the single worst FID result is still a good
-reminder that these two metrics measure genuinely different things and
-can move in opposite directions from the same change.
+paired with the single worst FID result is still a good reminder that
+these two metrics measure genuinely different things and can move in
+opposite directions from the same change.
 
 ### A selection-method dead end
 

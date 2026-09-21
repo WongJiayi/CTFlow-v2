@@ -169,7 +169,7 @@ window.Quarto = {
 </header>
 
 
-<p>This is a retrospective on our second submission to the VLM3D / CT-RATE text-to-CT challenge — a text-conditioned generative model that turns a radiology report into a synthetic chest CT volume. Last year’s system worked. This year we went after the two things we thought were actually limiting it — the VAE and classifier-free guidance — and then spent the final submission cycle fighting a string of very unglamorous bugs to get the result out the door. Both halves are worth writing down.</p>
+<p>This is a retrospective on our second submission to the VLM3D / CT-RATE text-to-CT challenge — a text-conditioned generative model that turns a radiology report into a synthetic chest CT volume. Last year’s system worked. This year we changed the two things we thought were actually limiting it — the VAE and classifier-free guidance — and then spent the final submission cycle finding and fixing a long list of unglamorous bugs before the deadline. Both halves are worth writing down.</p>
 <p>Links: <a href="https://huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026">model + inference code</a> · <a href="training/">training code</a> (this repo, no weights) · synthetic dataset (link added once the generation run finishes — see the end of this post).</p>
 <p>Every figure below (VAE connectivity grid, PSNR-KDE plot, and the submission-score chart) is a live matplotlib cell reading from the small cached arrays in <code>data/</code> — click “Show the plotting code” on any of them to see exactly how it’s drawn.</p>
 <section id="summary-before-the-details" class="level2">
@@ -185,7 +185,7 @@ window.Quarto = {
 </section>
 <section id="change-1-fine-tuning-the-vae-for-latent-connectivity" class="level2">
 <h2 class="anchored" data-anchor-id="change-1-fine-tuning-the-vae-for-latent-connectivity">Change 1: fine-tuning the VAE for latent connectivity</h2>
-<p>The stock VAE reconstructs individual CT slices fine, but its latent space isn’t <em>connected</em> in the sense that matters for flow matching: take two real latents, interpolate between them, decode the midpoint, and you often get an anatomically implausible image — ghosting, structural artifacts, tissue that doesn’t correspond to any real CT. If the transformer’s flow-matching process has to pass through regions of latent space like that on its way from noise to a valid sample, that’s a direct tax on generation quality.</p>
+<p>The stock VAE reconstructs individual CT slices fine, but its latent space isn’t <em>connected</em> in the sense that matters for flow matching: take two real latents, interpolate between them, decode the midpoint, and you often get an anatomically implausible image — ghosting, structural artifacts, tissue that doesn’t correspond to any real CT. If the transformer’s flow-matching process has to pass through regions of latent space like that on its way from noise to a valid sample, that directly hurts generation quality.</p>
 <p>We measure this with <strong>interpolated FID (iFID)</strong>, following Xu et al.: encode two samples, slerp to the midpoint, decode, and compute FID of the decoded midpoints against real data. A model with a well-connected latent space produces midpoints that still look like real CT; a disconnected one doesn’t. The gap between iFID and ordinary reconstruction FID (rFID) is a direct measure of <em>how much worse</em> interpolated latents are than latents straight from the encoder — that’s what we’re targeting.</p>
 <section id="roi-aware-connectivity-loss" class="level3">
 <h3 class="anchored" data-anchor-id="roi-aware-connectivity-loss">ROI-aware connectivity loss</h3>
@@ -203,7 +203,7 @@ window.Quarto = {
   d_{\text{LPIPS}}(\hat x_{ab}\!\odot\! M, x_b\!\odot\! M)
 \Big)
 \]</span></p>
-<p>The min (rather than forcing the midpoint to match a pixel-blend of both endpoints) just asks that the midpoint stay plausible with respect to <em>at least one</em> endpoint in the regions that matter — a much easier and more honest target than exact interpolation.</p>
+<p>The min (rather than forcing the midpoint to match a pixel-blend of both endpoints) just asks that the midpoint stay plausible with respect to <em>at least one</em> endpoint in the regions that matter — a much easier and more achievable target than exact interpolation.</p>
 <p>Full objective: standard reconstruction (L1 + LPIPS + adversarial) + KL + this connectivity term, with two schedules layered on top — KL ramps linearly from step 1,000–3,000 to a plateau of 1e-2 (immediately turning on all losses destabilizes the encoder early), and the ROI weight has a delayed ramp (steps 2,000–5,000, up to 0.15) followed by cosine annealing down to 0.075 by step 10,000, so reconstruction gets to refine cleanly in the back half of training. We also supervise multiple interpolation points per pair (<span class="math inline">\(\alpha \in \{0.3, 0.5, 0.7\}\)</span>), not just the midpoint.</p>
 <div id="cell-fig-connectivity" class="cell" data-fig-height="11" data-fig-width="11" data-execution_count="1">
 <details class="code-fold">
@@ -260,7 +260,7 @@ Figure&nbsp;1: Six pairs of CT slices (columns), decoded and slerp-interpolated 
 </div>
 </div>
 </div>
-<p><code>Recon</code> columns show that fine-tuning doesn’t cost reconstruction quality — both VAEs faithfully reproduce the input. The <code>Slerp</code> columns are the actual test: decode the midpoint between <span class="math inline">\(z_i\)</span> and <span class="math inline">\(z_j\)</span> with no real image ever having produced it. With the <strong>original VAE</strong>, that midpoint is visibly broken — a fine-grained checkerboard texture stamped over blurred, structurally wrong anatomy, worse the further apart the two source slices are (see column 4, where <span class="math inline">\(z_j\)</span> is a mostly-empty top-of-lung slice). With the <strong>fine-tuned VAE</strong>, the same midpoints look like plausible intermediate anatomy: coherent organ boundaries, no grid artifacts, structure that’s obviously <em>between</em> the two endpoints rather than a broken average of them. This is the failure mode the connectivity loss is directly targeting, made visible.</p>
+<p><code>Recon</code> columns show that fine-tuning doesn’t cost reconstruction quality — both VAEs faithfully reproduce the input. The <code>Slerp</code> columns are the actual test: decode the midpoint between <span class="math inline">\(z_i\)</span> and <span class="math inline">\(z_j\)</span> with no real image ever having produced it. With the <strong>original VAE</strong>, that midpoint is visibly broken — a fine-grained checkerboard texture stamped over blurred, structurally wrong anatomy, worse the further apart the two source slices are (see column 4, where <span class="math inline">\(z_j\)</span> is a mostly-empty top-of-lung slice). With the <strong>fine-tuned VAE</strong>, the same midpoints look like plausible intermediate anatomy: coherent organ boundaries, no grid artifacts, structure that’s obviously <em>between</em> the two endpoints rather than a broken average of them. This is exactly the failure mode the connectivity loss targets.</p>
 </section>
 <section id="did-it-work" class="level3">
 <h3 class="anchored" data-anchor-id="did-it-work">Did it work</h3>
@@ -395,7 +395,7 @@ Figure&nbsp;2: KDE of per-sample interpolation PSNR across VAE variants (lower =
 </section>
 <section id="the-submission-cycle-what-actually-broke" class="level2">
 <h2 class="anchored" data-anchor-id="the-submission-cycle-what-actually-broke">The submission cycle: what actually broke</h2>
-<p>Everything above was settled weeks before the deadline. The last stretch was a different kind of work — real-submission debugging under a $35-per-run cost and a hard clock, most of it self-inflicted complexity we then had to dig back out of.</p>
+<p>Everything above was settled weeks before the deadline. The last stretch was a different kind of work — real-submission debugging under a $35-per-run cost and a hard deadline, most of it complexity we created ourselves and then had to undo.</p>
 <p>One piece of pipeline vocabulary the rest of this section assumes: per report, we draw 5 candidate volumes from independent random seeds and publish one. <strong>Jerk-median selection</strong> picks the candidate whose z-axis jerk (rate of change of motion between slices — a cheap proxy for “does this look like a physically plausible scan”) is closest to the <em>median</em> jerk of the group, rather than the highest-scoring one on any single metric. The intuition: an unusually low or high jerk candidate is more likely to be a genuine artifact (frozen output, motion blur) than a lucky sample, so “typical among your own candidates” is a safer default than “extreme on the axis you’re optimizing.” Several of the bugs below are specifically about what happens when a step <em>upstream</em> of this selection — the seeds, the candidate pool, the metric feeding it — goes wrong in a way this particular rule doesn’t catch.</p>
 <p>Every point below is a real, scored submission, not a local ablation:</p>
 <div id="cell-fig-eval-progression" class="cell" data-fig-height="4.2" data-fig-width="12" data-execution_count="3">
@@ -461,7 +461,7 @@ Figure&nbsp;3: All three challenge metrics across the submission cycle’s real,
 </div>
 </div>
 </div>
-<div id="26f75798" class="cell" data-execution_count="4">
+<div id="7940c70f" class="cell" data-execution_count="4">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="4">
 <table class="caption-top table table-sm table-striped small">
 <colgroup>
@@ -539,7 +539,7 @@ Figure&nbsp;3: All three challenge metrics across the submission cycle’s real,
 </section>
 <section id="when-two-metrics-actively-disagree" class="level3">
 <h3 class="anchored" data-anchor-id="when-two-metrics-actively-disagree">When two metrics actively disagree</h3>
-<p>Before landing on xy=0.75mm, we tried declaring the in-plane spacing as exactly 1.0mm (matching the champion team’s reference config) with the SR adapter doing the upsampling. That submission scored 0.243 FVD — essentially tied with the 0.239 session best — and the worst FID by a wide margin (565 average, vs. 90–185 on every other run; the XZ/YZ planes alone hit 478 and 897). Our working theory: the FID evaluator itself resamples every volume to 1.0mm before extracting features. Declare exactly 1.0mm and that resample step becomes a no-op — whatever slice-to-slice inconsistency the SR adapter introduces passes straight through unfiltered, instead of being smoothed out by FID’s own preprocessing the way it is for every other spacing we declared. FVD uses a different resample target, so it never saw the same effect. We reverted to 0.75mm (keeping the adapter) and got both a better FID <em>and</em> the cycle’s best FVD — but a near-best FVD result sitting right next to the single worst FID result is still a good reminder that these two metrics measure genuinely different things and can move in opposite directions from the same change.</p>
+<p>Before landing on xy=0.75mm, we tried declaring the in-plane spacing as exactly 1.0mm (matching the champion team’s reference config) with the SR adapter doing the upsampling. That submission scored 0.243 FVD — essentially tied with the 0.239 session best — and the worst FID by a wide margin (565 average, vs. 90–185 on every other run; the XZ/YZ planes alone hit 478 and 897). Our working theory: the FID evaluator itself resamples every volume to 1.0mm before extracting features. Declare exactly 1.0mm and that resample step becomes a no-op — whatever slice-to-slice inconsistency the SR adapter introduces passes straight through unfiltered, instead of being smoothed out by FID’s own preprocessing the way it is for every other spacing we declared. FVD uses a different resample target, so it never saw the same effect. We reverted to 0.75mm (keeping the adapter) and got both a better FID <em>and</em> the cycle’s best FVD — but a near-best FVD result paired with the single worst FID result is still a good reminder that these two metrics measure genuinely different things and can move in opposite directions from the same change.</p>
 </section>
 <section id="a-selection-method-dead-end" class="level3">
 <h3 class="anchored" data-anchor-id="a-selection-method-dead-end">A selection-method dead end</h3>

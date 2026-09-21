@@ -287,8 +287,8 @@ import pandas as pd
 
 df = pd.read_csv("data/eval_progression.csv")
 x = range(len(df))
-colors = ["#e74c3c" if "bug" in n.lower() or "broken" in n.lower() else "#2ecc71" if "best" in n.lower() else "#7f8c8d"
-          for n in df["label"]]
+COLOR_MAP = {"red": "#e74c3c", "green": "#2ecc71", "grey": "#7f8c8d"}
+colors = [COLOR_MAP[c] for c in df["color"]]
 
 metrics = [
     ("fvd",      "FVD  (↓ better)",              False),
@@ -323,7 +323,7 @@ for ax, (col, ylabel, log) in zip(axes, metrics):
         ax.set_ylim(max(0, lo - pad), hi + pad)
 
 fig.legend(handles=[
-    plt.Line2D([0], [0], marker="o", color="w", markerfacecolor="#2ecc71", markersize=10, label="best result"),
+    plt.Line2D([0], [0], marker="o", color="w", markerfacecolor="#2ecc71", markersize=10, label="the final submission"),
     plt.Line2D([0], [0], marker="o", color="w", markerfacecolor="#e74c3c", markersize=10, label="scored badly (known bug)"),
     plt.Line2D([0], [0], marker="o", color="w", markerfacecolor="#7f8c8d", markersize=10, label="intermediate"),
 ], loc="upper center", bbox_to_anchor=(0.5, 1.12), ncol=3, fontsize=9, frameon=False)
@@ -343,22 +343,31 @@ tbl["CLIP avg"] = tbl["CLIP avg"].map(lambda v: f"{v:.2f}" if pd.notna(v) else "
 Markdown(tbl.to_markdown(index=False))
 ```
 
-Green = a best-FVD-so-far result; red = a run that scored badly for a
-real, identified reason; grey = intermediate points. FID and CLIP weren't
-logged for the very first (pre-cycle) and the Dockerfile-ENV-mismatch
-runs, so those two panels are missing points 1 and 3.
+Green = the actual final submission (the one that shipped); red = a run
+that scored badly for a real, identified reason; grey = intermediate
+reference points. FID and CLIP weren't logged for the very first
+(pre-cycle) and the Dockerfile-ENV-mismatch runs, so those two panels are
+missing points 1 and 3.
 
-Two things worth reading off this directly rather than from FVD alone.
-First, submission 6 (final) vs. submission 5 (session best): FVD alone
-makes it look like a step backward, but FID barely moved (90.2 → 92.9)
-and CLIP actually *improved slightly* (28.5 → 29.7) — the regression is
-concentrated in FVD specifically, consistent with the root cause (a
-diagnostic, feature-space-distribution issue caused by the broken CLIP
-safety net) rather than a wholesale quality collapse. Second, and more
+Three things worth reading off this directly rather than from FVD alone.
+First, submission 6 (CLIP safety net silently broken) vs. submission 5
+(session best): FVD alone makes 6 look like a step backward, but FID
+barely moved (90.2 → 92.9) and CLIP actually *improved slightly*
+(28.5 → 29.7) — the regression is concentrated in FVD specifically,
+consistent with the root cause (a diagnostic, feature-space-distribution
+issue) rather than a wholesale quality collapse. Second, and more
 strikingly: submission 4 (`xy=1.0mm`) has the single best FVD of the
 entire cycle (0.243) *and* by far the worst FID (565, roughly 6x every
 other run) — a genuine case of two metrics actively disagreeing, not
-just one being noisier than the other. That one's explained below.
+just one being noisier than the other; that one's explained below. Third:
+submission 7, the one that actually shipped once the offline-tokenizer
+bug was fixed, shows the CLIP safety net finally doing real work — CLIP
+avg jumps to 43.6 (T2I specifically to 49.4, well above every earlier
+run), while FVD (0.283) lands between the session best and the broken
+run, and FID (92.1) stays essentially flat. The safety net was never
+free — it costs some FVD relative to pure jerk-median selection with no
+quality floor — but it's now provably doing what it was built to do,
+which submission 6 never demonstrated at all.
 
 **The 256-frame ceiling.** Our training data preprocessing center-crops
 every volume to 256 slices. That's an invisible hard boundary: whatever
@@ -458,10 +467,12 @@ same-environment comparisons.
 
 ## Where it landed, and what's still open
 
-Best real result this cycle: FVD 0.239, a meaningful improvement over
-our own earlier submissions and over the naive-typicality-selection
-variant. A few things are deliberately left unresolved rather than
-overclaimed:
+The submission that actually shipped scored FVD 0.283, CLIP avg 43.6
+(T2I 49.4), FID avg 92.1 — worse FVD than the session-best 0.239, but the
+first real evidence the CLIP safety net does what it was built to do.
+0.239 remains the best FVD any configuration hit this cycle, just not in
+the build that had the tokenizer bug fixed. A few things are deliberately
+left unresolved rather than overclaimed:
 
 - The spacing fine-tune was run in two rounds (a second continuation on
   top of the first checkpoint), and round 2 was adopted as the default

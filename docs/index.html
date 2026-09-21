@@ -387,8 +387,8 @@ Figure&nbsp;2: KDE of per-sample interpolation PSNR across VAE variants (lower =
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_csv(<span class="st">"data/eval_progression.csv"</span>)</span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> <span class="bu">range</span>(<span class="bu">len</span>(df))</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>colors <span class="op">=</span> [<span class="st">"#e74c3c"</span> <span class="cf">if</span> <span class="st">"bug"</span> <span class="kw">in</span> n.lower() <span class="kw">or</span> <span class="st">"broken"</span> <span class="kw">in</span> n.lower() <span class="cf">else</span> <span class="st">"#2ecc71"</span> <span class="cf">if</span> <span class="st">"best"</span> <span class="kw">in</span> n.lower() <span class="cf">else</span> <span class="st">"#7f8c8d"</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> n <span class="kw">in</span> df[<span class="st">"label"</span>]]</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>COLOR_MAP <span class="op">=</span> {<span class="st">"red"</span>: <span class="st">"#e74c3c"</span>, <span class="st">"green"</span>: <span class="st">"#2ecc71"</span>, <span class="st">"grey"</span>: <span class="st">"#7f8c8d"</span>}</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>colors <span class="op">=</span> [COLOR_MAP[c] <span class="cf">for</span> c <span class="kw">in</span> df[<span class="st">"color"</span>]]</span>
 <span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>metrics <span class="op">=</span> [</span>
 <span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"fvd"</span>,      <span class="st">"FVD  (↓ better)"</span>,              <span class="va">False</span>),</span>
@@ -423,7 +423,7 @@ Figure&nbsp;2: KDE of per-sample interpolation PSNR across VAE variants (lower =
 <span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>        ax.set_ylim(<span class="bu">max</span>(<span class="dv">0</span>, lo <span class="op">-</span> pad), hi <span class="op">+</span> pad)</span>
 <span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>fig.legend(handles<span class="op">=</span>[</span>
-<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>    plt.Line2D([<span class="dv">0</span>], [<span class="dv">0</span>], marker<span class="op">=</span><span class="st">"o"</span>, color<span class="op">=</span><span class="st">"w"</span>, markerfacecolor<span class="op">=</span><span class="st">"#2ecc71"</span>, markersize<span class="op">=</span><span class="dv">10</span>, label<span class="op">=</span><span class="st">"best result"</span>),</span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>    plt.Line2D([<span class="dv">0</span>], [<span class="dv">0</span>], marker<span class="op">=</span><span class="st">"o"</span>, color<span class="op">=</span><span class="st">"w"</span>, markerfacecolor<span class="op">=</span><span class="st">"#2ecc71"</span>, markersize<span class="op">=</span><span class="dv">10</span>, label<span class="op">=</span><span class="st">"the final submission"</span>),</span>
 <span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>    plt.Line2D([<span class="dv">0</span>], [<span class="dv">0</span>], marker<span class="op">=</span><span class="st">"o"</span>, color<span class="op">=</span><span class="st">"w"</span>, markerfacecolor<span class="op">=</span><span class="st">"#e74c3c"</span>, markersize<span class="op">=</span><span class="dv">10</span>, label<span class="op">=</span><span class="st">"scored badly (known bug)"</span>),</span>
 <span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>    plt.Line2D([<span class="dv">0</span>], [<span class="dv">0</span>], marker<span class="op">=</span><span class="st">"o"</span>, color<span class="op">=</span><span class="st">"w"</span>, markerfacecolor<span class="op">=</span><span class="st">"#7f8c8d"</span>, markersize<span class="op">=</span><span class="dv">10</span>, label<span class="op">=</span><span class="st">"intermediate"</span>),</span>
 <span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>], loc<span class="op">=</span><span class="st">"upper center"</span>, bbox_to_anchor<span class="op">=</span>(<span class="fl">0.5</span>, <span class="fl">1.12</span>), ncol<span class="op">=</span><span class="dv">3</span>, fontsize<span class="op">=</span><span class="dv">9</span>, frameon<span class="op">=</span><span class="va">False</span>)</span>
@@ -443,14 +443,14 @@ Figure&nbsp;3: All three challenge metrics across the submission cycle’s real,
 </div>
 </div>
 </div>
-<div id="191f5d1d" class="cell" data-execution_count="4">
+<div id="7c27def7" class="cell" data-execution_count="4">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="4">
 <table class="caption-top table table-sm table-striped small">
 <colgroup>
 <col style="width: 6%">
-<col style="width: 53%">
-<col style="width: 9%">
-<col style="width: 14%">
+<col style="width: 56%">
+<col style="width: 8%">
+<col style="width: 13%">
 <col style="width: 15%">
 </colgroup>
 <thead>
@@ -505,12 +505,19 @@ Figure&nbsp;3: All three challenge metrics across the submission cycle’s real,
 <td style="text-align: left;">92.87</td>
 <td style="text-align: left;">29.72</td>
 </tr>
+<tr class="odd">
+<td style="text-align: right;">7</td>
+<td style="text-align: left;">Final (bugs fixed – the actual submission)</td>
+<td style="text-align: right;">0.28</td>
+<td style="text-align: left;">92.12</td>
+<td style="text-align: left;">43.64</td>
+</tr>
 </tbody>
 </table>
 </div>
 </div>
-<p>Green = a best-FVD-so-far result; red = a run that scored badly for a real, identified reason; grey = intermediate points. FID and CLIP weren’t logged for the very first (pre-cycle) and the Dockerfile-ENV-mismatch runs, so those two panels are missing points 1 and 3.</p>
-<p>Two things worth reading off this directly rather than from FVD alone. First, submission 6 (final) vs.&nbsp;submission 5 (session best): FVD alone makes it look like a step backward, but FID barely moved (90.2 → 92.9) and CLIP actually <em>improved slightly</em> (28.5 → 29.7) — the regression is concentrated in FVD specifically, consistent with the root cause (a diagnostic, feature-space-distribution issue caused by the broken CLIP safety net) rather than a wholesale quality collapse. Second, and more strikingly: submission 4 (<code>xy=1.0mm</code>) has the single best FVD of the entire cycle (0.243) <em>and</em> by far the worst FID (565, roughly 6x every other run) — a genuine case of two metrics actively disagreeing, not just one being noisier than the other. That one’s explained below.</p>
+<p>Green = the actual final submission (the one that shipped); red = a run that scored badly for a real, identified reason; grey = intermediate reference points. FID and CLIP weren’t logged for the very first (pre-cycle) and the Dockerfile-ENV-mismatch runs, so those two panels are missing points 1 and 3.</p>
+<p>Three things worth reading off this directly rather than from FVD alone. First, submission 6 (CLIP safety net silently broken) vs.&nbsp;submission 5 (session best): FVD alone makes 6 look like a step backward, but FID barely moved (90.2 → 92.9) and CLIP actually <em>improved slightly</em> (28.5 → 29.7) — the regression is concentrated in FVD specifically, consistent with the root cause (a diagnostic, feature-space-distribution issue) rather than a wholesale quality collapse. Second, and more strikingly: submission 4 (<code>xy=1.0mm</code>) has the single best FVD of the entire cycle (0.243) <em>and</em> by far the worst FID (565, roughly 6x every other run) — a genuine case of two metrics actively disagreeing, not just one being noisier than the other; that one’s explained below. Third: submission 7, the one that actually shipped once the offline-tokenizer bug was fixed, shows the CLIP safety net finally doing real work — CLIP avg jumps to 43.6 (T2I specifically to 49.4, well above every earlier run), while FVD (0.283) lands between the session best and the broken run, and FID (92.1) stays essentially flat. The safety net was never free — it costs some FVD relative to pure jerk-median selection with no quality floor — but it’s now provably doing what it was built to do, which submission 6 never demonstrated at all.</p>
 <p><strong>The 256-frame ceiling.</strong> Our training data preprocessing center-crops every volume to 256 slices. That’s an invisible hard boundary: whatever the autoregressive model draws past 256 frames, it has <em>never seen anything like it</em> in training, regardless of prompt. An early real submission scored badly (FVD 0.53) for exactly this reason — nothing wrong with the model, we just let generation run past the one boundary that mattered. Capping <code>max_blocks</code> at 16 (16×16 = 256 frames) fixed it immediately.</p>
 <p><strong>Declared vs.&nbsp;conditioned spacing.</strong> This is a post-processing decoupling, not a learned conditioning branch — the model itself has no spacing input. We found, empirically, that treating the generation as a <em>coarser</em> z-spacing (3.0mm) than what we actually declare in the output header (1.5mm, or an adaptive value computed to keep every volume’s block at a fixed 384mm physical extent) nudges it toward more anatomically varied output — real content doesn’t get proportionally rescaled just because we relabel the header, so this is a legitimate (if slightly hacky) way to push generation out of a repetitive part of its learned distribution. This one small decoupling outperformed every geometry variant we tried against the actual challenge FID/FVD metrics.</p>
 <p><strong>When two metrics actively disagree.</strong> Before landing on xy=0.75mm, we tried declaring the in-plane spacing as exactly 1.0mm (matching the champion team’s reference config) with the SR adapter doing the upsampling. That submission scored the best FVD of the entire cycle (0.243) — and the worst FID by a wide margin (565 average, vs.&nbsp;90–185 on every other run; the XZ/YZ planes alone hit 478 and 897). Our working theory: the FID evaluator itself resamples every volume to 1.0mm before extracting features. Declare exactly 1.0mm and that resample step becomes a no-op — whatever slice-to-slice inconsistency the SR adapter introduces passes straight through unfiltered, instead of being smoothed out by FID’s own preprocessing the way it is for every other spacing we declared. FVD uses a different resample target, so it never saw the same effect. We reverted to 0.75mm (keeping the adapter) and got both a better FID <em>and</em> the session’s best FVD — but the fact that the single best FVD result of the whole cycle came attached to the single worst FID result is a good reminder that these metrics measure genuinely different things and can move in opposite directions from the same change.</p>
@@ -521,7 +528,7 @@ Figure&nbsp;3: All three challenge metrics across the submission cycle’s real,
 </section>
 <section id="where-it-landed-and-whats-still-open" class="level2">
 <h2 class="anchored" data-anchor-id="where-it-landed-and-whats-still-open">Where it landed, and what’s still open</h2>
-<p>Best real result this cycle: FVD 0.239, a meaningful improvement over our own earlier submissions and over the naive-typicality-selection variant. A few things are deliberately left unresolved rather than overclaimed:</p>
+<p>The submission that actually shipped scored FVD 0.283, CLIP avg 43.6 (T2I 49.4), FID avg 92.1 — worse FVD than the session-best 0.239, but the first real evidence the CLIP safety net does what it was built to do. 0.239 remains the best FVD any configuration hit this cycle, just not in the build that had the tokenizer bug fixed. A few things are deliberately left unresolved rather than overclaimed:</p>
 <ul>
 <li>The spacing fine-tune was run in two rounds (a second continuation on top of the first checkpoint), and round 2 was adopted as the default early in the cycle without ever being A/B tested against round 1 alone.</li>
 <li>CFG training capability exists; inference-time benefit doesn’t, and we don’t yet know why.</li>

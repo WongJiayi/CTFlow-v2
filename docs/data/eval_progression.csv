@@ -1,5 +1,4 @@
 label,fvd,fid_avg,clip_avg,color,note
-Historical best (pre-cycle),0.2388,,,grey,median-jerk + native-1.5mm z geometry
 Early real submission (bug),0.5264,181.51,35.29,red,spacing-ft ckpt4500 HU1000 -- autoregressive generation past the 256-frame training boundary
 Recovered but still buggy,0.3242,80.50,32.04,red,"spacing3->stretch256@1.5, gate128+degenerate-filter fix -- Dockerfile ENV mismatch + degenerate-candidate median poisoning"
 xy=1.0mm + SR adapter,0.2427,565.31,19.66,red,"best FVD of the cycle but FID collapses -- declaring exactly 1.0mm makes FID's own 1mm resample a no-op, passing adapter artifacts straight through"

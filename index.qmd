@@ -344,29 +344,30 @@ Markdown(tbl.to_markdown(index=False))
 ```
 
 Green = the actual final submission (the one that shipped); red = a run
-that scored badly for a real, identified reason; grey = intermediate
-reference points. FID and CLIP weren't logged for the very first
-(pre-cycle) run, so those two panels are missing point 1.
+that scored badly for a real, identified reason; grey = the session-best
+reference point. Every point here is a real, scored submission — no
+pre-cycle or local-only numbers mixed in.
 
 Three things worth reading off this directly rather than from FVD alone.
-First, submission 6 (CLIP safety net silently broken) vs. submission 5
-(session best): FVD alone makes 6 look like a step backward, but FID
+First, submission 5 (CLIP safety net silently broken) vs. submission 4
+(session best): FVD alone makes 5 look like a step backward, but FID
 barely moved (90.2 → 92.9) and CLIP actually *improved slightly*
 (28.5 → 29.7) — the regression is concentrated in FVD specifically,
 consistent with the root cause (a diagnostic, feature-space-distribution
 issue) rather than a wholesale quality collapse. Second, and more
-strikingly: submission 4 (`xy=1.0mm`) has the single best FVD of the
-entire cycle (0.243) *and* by far the worst FID (565, roughly 6x every
+strikingly: submission 3 (`xy=1.0mm`) essentially matches the cycle's
+best FVD (0.243 vs. 0.239 for the session best — a difference well
+within noise) *and* has by far the worst FID (565, roughly 6x every
 other run) — a genuine case of two metrics actively disagreeing, not
 just one being noisier than the other; that one's explained below. Third:
-submission 7, the one that actually shipped once the offline-tokenizer
+submission 6, the one that actually shipped once the offline-tokenizer
 bug was fixed, shows the CLIP safety net finally doing real work — CLIP
 avg jumps to 43.6 (T2I specifically to 49.4, well above every earlier
 run), while FVD (0.283) lands between the session best and the broken
 run, and FID (92.1) stays essentially flat. The safety net was never
 free — it costs some FVD relative to pure jerk-median selection with no
 quality floor — but it's now provably doing what it was built to do,
-which submission 6 never demonstrated at all.
+which submission 5 never demonstrated at all.
 
 **The 256-frame ceiling.** Our training data preprocessing center-crops
 every volume to 256 slices. That's an invisible hard boundary: whatever

@@ -443,7 +443,7 @@ Figure&nbsp;3: All three challenge metrics across the submission cycle’s real,
 </div>
 </div>
 </div>
-<div id="88e98545" class="cell" data-execution_count="4">
+<div id="26253f1b" class="cell" data-execution_count="4">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="4">
 <table class="caption-top table table-sm table-striped small">
 <colgroup>
@@ -458,66 +458,59 @@ Figure&nbsp;3: All three challenge metrics across the submission cycle’s real,
 <th style="text-align: right;">#</th>
 <th style="text-align: left;">Submission</th>
 <th style="text-align: right;">FVD</th>
-<th style="text-align: left;">FID avg</th>
-<th style="text-align: left;">CLIP avg</th>
+<th style="text-align: right;">FID avg</th>
+<th style="text-align: right;">CLIP avg</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td style="text-align: right;">1</td>
-<td style="text-align: left;">Historical best (pre-cycle)</td>
-<td style="text-align: right;">0.24</td>
-<td style="text-align: left;">—</td>
-<td style="text-align: left;">—</td>
+<td style="text-align: left;">Early real submission (bug)</td>
+<td style="text-align: right;">0.53</td>
+<td style="text-align: right;">181.51</td>
+<td style="text-align: right;">35.29</td>
 </tr>
 <tr class="even">
 <td style="text-align: right;">2</td>
-<td style="text-align: left;">Early real submission (bug)</td>
-<td style="text-align: right;">0.53</td>
-<td style="text-align: left;">181.51</td>
-<td style="text-align: left;">35.29</td>
+<td style="text-align: left;">Recovered but still buggy</td>
+<td style="text-align: right;">0.32</td>
+<td style="text-align: right;">80.5</td>
+<td style="text-align: right;">32.04</td>
 </tr>
 <tr class="odd">
 <td style="text-align: right;">3</td>
-<td style="text-align: left;">Recovered but still buggy</td>
-<td style="text-align: right;">0.32</td>
-<td style="text-align: left;">80.50</td>
-<td style="text-align: left;">32.04</td>
+<td style="text-align: left;">xy=1.0mm + SR adapter</td>
+<td style="text-align: right;">0.24</td>
+<td style="text-align: right;">565.31</td>
+<td style="text-align: right;">19.66</td>
 </tr>
 <tr class="even">
 <td style="text-align: right;">4</td>
-<td style="text-align: left;">xy=1.0mm + SR adapter</td>
+<td style="text-align: left;">Session best</td>
 <td style="text-align: right;">0.24</td>
-<td style="text-align: left;">565.31</td>
-<td style="text-align: left;">19.66</td>
+<td style="text-align: right;">90.23</td>
+<td style="text-align: right;">28.54</td>
 </tr>
 <tr class="odd">
 <td style="text-align: right;">5</td>
-<td style="text-align: left;">Session best</td>
-<td style="text-align: right;">0.24</td>
-<td style="text-align: left;">90.23</td>
-<td style="text-align: left;">28.54</td>
+<td style="text-align: left;">Final (CLIP safety net silently broken)</td>
+<td style="text-align: right;">0.35</td>
+<td style="text-align: right;">92.87</td>
+<td style="text-align: right;">29.72</td>
 </tr>
 <tr class="even">
 <td style="text-align: right;">6</td>
-<td style="text-align: left;">Final (CLIP safety net silently broken)</td>
-<td style="text-align: right;">0.35</td>
-<td style="text-align: left;">92.87</td>
-<td style="text-align: left;">29.72</td>
-</tr>
-<tr class="odd">
-<td style="text-align: right;">7</td>
 <td style="text-align: left;">Final (bugs fixed – the actual submission)</td>
 <td style="text-align: right;">0.28</td>
-<td style="text-align: left;">92.12</td>
-<td style="text-align: left;">43.64</td>
+<td style="text-align: right;">92.12</td>
+<td style="text-align: right;">43.64</td>
 </tr>
 </tbody>
 </table>
 </div>
 </div>
-<p>Green = the actual final submission (the one that shipped); red = a run that scored badly for a real, identified reason; grey = intermediate reference points. FID and CLIP weren’t logged for the very first (pre-cycle) run, so those two panels are missing point 1.</p>
-<p>Three things worth reading off this directly rather than from FVD alone. First, submission 6 (CLIP safety net silently broken) vs.&nbsp;submission 5 (session best): FVD alone makes 6 look like a step backward, but FID barely moved (90.2 → 92.9) and CLIP actually <em>improved slightly</em> (28.5 → 29.7) — the regression is concentrated in FVD specifically, consistent with the root cause (a diagnostic, feature-space-distribution issue) rather than a wholesale quality collapse. Second, and more strikingly: submission 4 (<code>xy=1.0mm</code>) has the single best FVD of the entire cycle (0.243) <em>and</em> by far the worst FID (565, roughly 6x every other run) — a genuine case of two metrics actively disagreeing, not just one being noisier than the other; that one’s explained below. Third: submission 7, the one that actually shipped once the offline-tokenizer bug was fixed, shows the CLIP safety net finally doing real work — CLIP avg jumps to 43.6 (T2I specifically to 49.4, well above every earlier run), while FVD (0.283) lands between the session best and the broken run, and FID (92.1) stays essentially flat. The safety net was never free — it costs some FVD relative to pure jerk-median selection with no quality floor — but it’s now provably doing what it was built to do, which submission 6 never demonstrated at all.</p>
+<p>Green = the actual final submission (the one that shipped); red = a run that scored badly for a real, identified reason; grey = the session-best reference point. Every point here is a real, scored submission — no pre-cycle or local-only numbers mixed in.</p>
+<p>Three things worth reading off this directly rather than from FVD alone. First, submission 5 (CLIP safety net silently broken) vs.&nbsp;submission 4 (session best): FVD alone makes 5 look like a step backward, but FID barely moved (90.2 → 92.9) and CLIP actually <em>improved slightly</em> (28.5 → 29.7) — the regression is concentrated in FVD specifically, consistent with the root cause (a diagnostic, feature-space-distribution issue) rather than a wholesale quality collapse. Second, and more strikingly: submission 3 (<code>xy=1.0mm</code>) essentially matches the cycle’s best FVD (0.243 vs.&nbsp;0.239 for the session best — a difference well within noise) <em>and</em> has by far the worst FID (565, roughly 6x every other run) — a genuine case of two metrics actively disagreeing, not just one being noisier than the other; that one’s explained below. Third: submission 6, the one that actually shipped once the offline-tokenizer bug was fixed, shows the CLIP safety net finally doing real work — CLIP avg jumps to 43.6 (T2I specifically to 49.4, well above every earlier run), while FVD (0.283) lands between the session best and the broken run, and FID (92.1) stays essentially flat. The safety net was never free — it costs some FVD relative to pure jerk-median selection with no quality floor — but it’s now provably doing what it was built to do, which submission 5 never demonstrated at all.</p>
 <p><strong>The 256-frame ceiling.</strong> Our training data preprocessing center-crops every volume to 256 slices. That’s an invisible hard boundary: whatever the autoregressive model draws past 256 frames, it has <em>never seen anything like it</em> in training, regardless of prompt. An early real submission scored badly (FVD 0.53) for exactly this reason — nothing wrong with the model, we just let generation run past the one boundary that mattered. Capping <code>max_blocks</code> at 16 (16×16 = 256 frames) fixed it immediately.</p>
 <p><strong>Declared vs.&nbsp;conditioned spacing.</strong> This is a post-processing decoupling, not a learned conditioning branch — the model itself has no spacing input. We found, empirically, that treating the generation as a <em>coarser</em> z-spacing (3.0mm) than what we actually declare in the output header (1.5mm, or an adaptive value computed to keep every volume’s block at a fixed 384mm physical extent) nudges it toward more anatomically varied output — real content doesn’t get proportionally rescaled just because we relabel the header, so this is a legitimate (if slightly hacky) way to push generation out of a repetitive part of its learned distribution. This one small decoupling outperformed every geometry variant we tried against the actual challenge FID/FVD metrics.</p>
 <p><strong>When two metrics actively disagree.</strong> Before landing on xy=0.75mm, we tried declaring the in-plane spacing as exactly 1.0mm (matching the champion team’s reference config) with the SR adapter doing the upsampling. That submission scored the best FVD of the entire cycle (0.243) — and the worst FID by a wide margin (565 average, vs.&nbsp;90–185 on every other run; the XZ/YZ planes alone hit 478 and 897). Our working theory: the FID evaluator itself resamples every volume to 1.0mm before extracting features. Declare exactly 1.0mm and that resample step becomes a no-op — whatever slice-to-slice inconsistency the SR adapter introduces passes straight through unfiltered, instead of being smoothed out by FID’s own preprocessing the way it is for every other spacing we declared. FVD uses a different resample target, so it never saw the same effect. We reverted to 0.75mm (keeping the adapter) and got both a better FID <em>and</em> the session’s best FVD — but the fact that the single best FVD result of the whole cycle came attached to the single worst FID result is a good reminder that these metrics measure genuinely different things and can move in opposite directions from the same change.</p>

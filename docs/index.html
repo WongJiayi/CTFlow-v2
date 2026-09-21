@@ -126,6 +126,7 @@ window.Quarto = {
   <li><a href="#change-2-classifier-free-guidance" id="toc-change-2-classifier-free-guidance" class="nav-link" data-scroll-target="#change-2-classifier-free-guidance">Change 2: classifier-free guidance</a></li>
   <li><a href="#the-submission-cycle-what-actually-broke" id="toc-the-submission-cycle-what-actually-broke" class="nav-link" data-scroll-target="#the-submission-cycle-what-actually-broke">The submission cycle: what actually broke</a></li>
   <li><a href="#where-it-landed-and-whats-still-open" id="toc-where-it-landed-and-whats-still-open" class="nav-link" data-scroll-target="#where-it-landed-and-whats-still-open">Where it landed, and what’s still open</a></li>
+  <li><a href="#a-few-generated-volumes" id="toc-a-few-generated-volumes" class="nav-link" data-scroll-target="#a-few-generated-volumes">A few generated volumes</a></li>
   <li><a href="#links" id="toc-links" class="nav-link" data-scroll-target="#links">Links</a></li>
   <li><a href="#citation" id="toc-citation" class="nav-link" data-scroll-target="#citation">Citation</a></li>
   </ul>
@@ -433,7 +434,7 @@ Figure&nbsp;3: All three challenge metrics across the submission cycle’s real,
 </div>
 </div>
 </div>
-<div id="d65ee992" class="cell" data-execution_count="4">
+<div id="5d3de27e" class="cell" data-execution_count="4">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="4">
 <table class="caption-top table table-sm table-striped small">
 <colgroup>
@@ -508,6 +509,42 @@ Figure&nbsp;3: All three challenge metrics across the submission cycle’s real,
 <li>CFG training capability exists; inference-time benefit doesn’t, and we don’t yet know why.</li>
 <li>The retry pool was cut from 5 to 2 seeds under real time pressure, on the reasoning that the winning seed in our test cases was already in the smaller pool — true in the cases we checked, not something we validated at scale before the final submission.</li>
 </ul>
+</section>
+<section id="a-few-generated-volumes" class="level2">
+<h2 class="anchored" data-anchor-id="a-few-generated-volumes">A few generated volumes</h2>
+<p>Six real outputs from the synthetic CT-RATE validation run (soft-tissue window, scrolling axial view, one clip per report). No cherry-picking beyond “the run had gotten far enough to produce them” at the time this post was written — the full 1,516-volume set is linked below once it finishes.</p>
+<style>
+.demo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 1.2em 0; }
+.demo-grid figure { margin: 0; }
+.demo-grid video { width: 100%; border-radius: 6px; background: #000; }
+.demo-grid figcaption { font-size: 0.78em; color: #555; margin-top: 4px; }
+</style>
+<div class="demo-grid">
+  <figure class="figure">
+    <video src="data/demo_videos/valid_1_a_1.mp4" controls="" loop="" muted="" playsinline=""></video>
+    <figcaption>valid_1_a_1 — "Trachea, both main bronchi are open. Mediastinal main vascular structures, heart contour…"</figcaption>
+  </figure>
+  <figure class="figure">
+    <video src="data/demo_videos/valid_6_a_1.mp4" controls="" loop="" muted="" playsinline=""></video>
+    <figcaption>valid_6_a_1 — "Trachea and both main bronchi are open. No occlusive pathology was detected in the trachea…"</figcaption>
+  </figure>
+  <figure class="figure">
+    <video src="data/demo_videos/valid_10_a_1.mp4" controls="" loop="" muted="" playsinline=""></video>
+    <figcaption>valid_10_a_1 — "Calibration of the aortic arch is at the maximal physiological limit…"</figcaption>
+  </figure>
+  <figure class="figure">
+    <video src="data/demo_videos/valid_17_a_1.mp4" controls="" loop="" muted="" playsinline=""></video>
+    <figcaption>valid_17_a_1 — "Trachea, both main bronchi are open. Mediastinal main vascular structures, heart contour…"</figcaption>
+  </figure>
+  <figure class="figure">
+    <video src="data/demo_videos/valid_24_a_1.mp4" controls="" loop="" muted="" playsinline=""></video>
+    <figcaption>valid_24_a_1 — "Trachea and both main bronchi are open. No occlusive pathology was detected in the trachea…"</figcaption>
+  </figure>
+  <figure class="figure">
+    <video src="data/demo_videos/valid_38_a_1.mp4" controls="" loop="" muted="" playsinline=""></video>
+    <figcaption>valid_38_a_1 — "The size of the thyroid gland has increased and has a heterogeneous appearance…"</figcaption>
+  </figure>
+</div>
 </section>
 <section id="links" class="level2">
 <h2 class="anchored" data-anchor-id="links">Links</h2>

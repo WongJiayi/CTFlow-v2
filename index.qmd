@@ -441,6 +441,49 @@ overclaimed:
   the smaller pool — true in the cases we checked, not something we
   validated at scale before the final submission.
 
+## A few generated volumes
+
+Six real outputs from the synthetic CT-RATE validation run (soft-tissue
+window, scrolling axial view, one clip per report). No cherry-picking
+beyond "the run had gotten far enough to produce them" at the time this
+post was written — the full 1,516-volume set is linked below once it
+finishes.
+
+```{=html}
+<style>
+.demo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 1.2em 0; }
+.demo-grid figure { margin: 0; }
+.demo-grid video { width: 100%; border-radius: 6px; background: #000; }
+.demo-grid figcaption { font-size: 0.78em; color: #555; margin-top: 4px; }
+</style>
+<div class="demo-grid">
+  <figure>
+    <video src="data/demo_videos/valid_1_a_1.mp4" controls loop muted playsinline></video>
+    <figcaption>valid_1_a_1 — "Trachea, both main bronchi are open. Mediastinal main vascular structures, heart contour…"</figcaption>
+  </figure>
+  <figure>
+    <video src="data/demo_videos/valid_6_a_1.mp4" controls loop muted playsinline></video>
+    <figcaption>valid_6_a_1 — "Trachea and both main bronchi are open. No occlusive pathology was detected in the trachea…"</figcaption>
+  </figure>
+  <figure>
+    <video src="data/demo_videos/valid_10_a_1.mp4" controls loop muted playsinline></video>
+    <figcaption>valid_10_a_1 — "Calibration of the aortic arch is at the maximal physiological limit…"</figcaption>
+  </figure>
+  <figure>
+    <video src="data/demo_videos/valid_17_a_1.mp4" controls loop muted playsinline></video>
+    <figcaption>valid_17_a_1 — "Trachea, both main bronchi are open. Mediastinal main vascular structures, heart contour…"</figcaption>
+  </figure>
+  <figure>
+    <video src="data/demo_videos/valid_24_a_1.mp4" controls loop muted playsinline></video>
+    <figcaption>valid_24_a_1 — "Trachea and both main bronchi are open. No occlusive pathology was detected in the trachea…"</figcaption>
+  </figure>
+  <figure>
+    <video src="data/demo_videos/valid_38_a_1.mp4" controls loop muted playsinline></video>
+    <figcaption>valid_38_a_1 — "The size of the thyroid gland has increased and has a heterogeneous appearance…"</figcaption>
+  </figure>
+</div>
+```
+
 ## Links
 
 - Model + inference pipeline + the exact submitted container:

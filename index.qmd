@@ -291,27 +291,36 @@ colors = ["#e74c3c" if "bug" in n.lower() or "broken" in n.lower() else "#2ecc71
           for n in df["label"]]
 
 metrics = [
-    ("fvd",      "FVD  (↓ better)"),
-    ("fid_avg",  "FID avg  (↓ better)"),
-    ("clip_avg", "CT-CLIPScore avg  (↑ better)"),
+    ("fvd",      "FVD  (↓ better)",              False),
+    ("fid_avg",  "FID avg, log scale  (↓ better)", True),
+    ("clip_avg", "CT-CLIPScore avg  (↑ better)",  False),
 ]
 
 fig, axes = plt.subplots(1, 3, figsize=(12, 4.2))
-for ax, (col, ylabel) in zip(axes, metrics):
+for ax, (col, ylabel, log) in zip(axes, metrics):
     vals = df[col]
     have = vals.notna()
     ax.plot(list(x), vals, color="#7f8c8d", linewidth=1, zorder=1, linestyle="--")
-    ax.scatter([i for i in x if have[i]], vals[have], s=140,
+    pts = ax.scatter([i for i in x if have[i]], vals[have], s=140,
                c=[colors[i] for i in x if have[i]], zorder=2,
                edgecolor="white", linewidth=0.5)
+    for i in x:
+        if have[i]:
+            ax.annotate(f"{vals[i]:.0f}" if col == "fid_avg" else f"{vals[i]:.2f}",
+                        (i, vals[i]), textcoords="offset points", xytext=(0, 9),
+                        ha="center", fontsize=7.5, color="#333")
     ax.set_ylabel(ylabel, fontsize=10)
     ax.set_xticks(list(x))
     ax.set_xticklabels([str(i + 1) for i in x], fontsize=9)
     ax.set_xlabel("submission #", fontsize=9)
     ax.spines[["top", "right"]].set_visible(False)
     lo, hi = vals.min(), vals.max()
-    pad = (hi - lo) * 0.3 if hi > lo else hi * 0.1
-    ax.set_ylim(max(0, lo - pad), hi + pad)
+    if log:
+        ax.set_yscale("log")
+        ax.set_ylim(lo / 1.6, hi * 1.6)
+    else:
+        pad = (hi - lo) * 0.3 if hi > lo else hi * 0.1
+        ax.set_ylim(max(0, lo - pad), hi + pad)
 
 fig.legend(handles=[
     plt.Line2D([0], [0], marker="o", color="w", markerfacecolor="#2ecc71", markersize=10, label="best result"),
@@ -331,20 +340,22 @@ tbl.insert(0, "#", range(1, len(tbl) + 1))
 Markdown(tbl.to_markdown(index=False, floatfmt=".2f"))
 ```
 
-Green = the cycle's best FVD; red = a run that scored badly for a real,
-identified reason; grey = intermediate points. FID and CLIP weren't
-logged for the first three runs (before we started tracking per-metric
-scores per submission), so those two panels only show the last two.
-That's also the point worth making explicitly: FVD alone makes the last
-submission look like a step backward from the session best, but FID
-barely moved (90.2 → 92.9) and CLIP actually *improved slightly*
-(28.5 → 29.7) — the regression is concentrated in FVD specifically,
-consistent with the root cause (a diagnostic, feature-space-distribution
-issue caused by the broken CLIP safety net) rather than a wholesale
-quality collapse. The dip and recovery in the middle of the FVD panel is
-the Dockerfile-ENV-mismatch and degenerate-candidate bugs described
-below; the spike on the right is the CLIP-safety-net bug, also described
-below — both are real regressions with real root causes, not noise.
+Green = a best-FVD-so-far result; red = a run that scored badly for a
+real, identified reason; grey = intermediate points. FID and CLIP weren't
+logged for the very first (pre-cycle) and the Dockerfile-ENV-mismatch
+runs, so those two panels are missing points 1 and 3.
+
+Two things worth reading off this directly rather than from FVD alone.
+First, submission 6 (final) vs. submission 5 (session best): FVD alone
+makes it look like a step backward, but FID barely moved (90.2 → 92.9)
+and CLIP actually *improved slightly* (28.5 → 29.7) — the regression is
+concentrated in FVD specifically, consistent with the root cause (a
+diagnostic, feature-space-distribution issue caused by the broken CLIP
+safety net) rather than a wholesale quality collapse. Second, and more
+strikingly: submission 4 (`xy=1.0mm`) has the single best FVD of the
+entire cycle (0.243) *and* by far the worst FID (565, roughly 6x every
+other run) — a genuine case of two metrics actively disagreeing, not
+just one being noisier than the other. That one's explained below.
 
 **The 256-frame ceiling.** Our training data preprocessing center-crops
 every volume to 256 slices. That's an invisible hard boundary: whatever
@@ -366,6 +377,24 @@ relabel the header, so this is a legitimate (if slightly hacky) way to
 push generation out of a repetitive part of its learned distribution.
 This one small decoupling outperformed every geometry variant we tried
 against the actual challenge FID/FVD metrics.
+
+**When two metrics actively disagree.** Before landing on xy=0.75mm, we
+tried declaring the in-plane spacing as exactly 1.0mm (matching the
+champion team's reference config) with the SR adapter doing the
+upsampling. That submission scored the best FVD of the entire cycle
+(0.243) — and the worst FID by a wide margin (565 average, vs. 90–185 on
+every other run; the XZ/YZ planes alone hit 478 and 897). Our working
+theory: the FID evaluator itself resamples every volume to 1.0mm before
+extracting features. Declare exactly 1.0mm and that resample step becomes
+a no-op — whatever slice-to-slice inconsistency the SR adapter
+introduces passes straight through unfiltered, instead of being smoothed
+out by FID's own preprocessing the way it is for every other spacing we
+declared. FVD uses a different resample target, so it never saw the
+same effect. We reverted to 0.75mm (keeping the adapter) and got both a
+better FID *and* the session's best FVD — but the fact that the single
+best FVD result of the whole cycle came attached to the single worst FID
+result is a good reminder that these metrics measure genuinely different
+things and can move in opposite directions from the same change.
 
 **A selection-method dead end.** We tried scoring candidates by
 Mahalanobis "typicality" against the published dataset's feature

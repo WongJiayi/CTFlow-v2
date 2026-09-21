@@ -1,6 +1,8 @@
 project:
   type: default
   output-dir: docs
+  resources:
+    - "data/**"
 
 format:
   html:

@@ -391,41 +391,50 @@ Figure&nbsp;2: KDE of per-sample interpolation PSNR across VAE variants (lower =
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> n <span class="kw">in</span> df[<span class="st">"label"</span>]]</span>
 <span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>metrics <span class="op">=</span> [</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"fvd"</span>,      <span class="st">"FVD  (↓ better)"</span>),</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"fid_avg"</span>,  <span class="st">"FID avg  (↓ better)"</span>),</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"clip_avg"</span>, <span class="st">"CT-CLIPScore avg  (↑ better)"</span>),</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"fvd"</span>,      <span class="st">"FVD  (↓ better)"</span>,              <span class="va">False</span>),</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"fid_avg"</span>,  <span class="st">"FID avg, log scale  (↓ better)"</span>, <span class="va">True</span>),</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"clip_avg"</span>, <span class="st">"CT-CLIPScore avg  (↑ better)"</span>,  <span class="va">False</span>),</span>
 <span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>]</span>
 <span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">3</span>, figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="fl">4.2</span>))</span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ax, (col, ylabel) <span class="kw">in</span> <span class="bu">zip</span>(axes, metrics):</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ax, (col, ylabel, log) <span class="kw">in</span> <span class="bu">zip</span>(axes, metrics):</span>
 <span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    vals <span class="op">=</span> df[col]</span>
 <span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    have <span class="op">=</span> vals.notna()</span>
 <span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    ax.plot(<span class="bu">list</span>(x), vals, color<span class="op">=</span><span class="st">"#7f8c8d"</span>, linewidth<span class="op">=</span><span class="dv">1</span>, zorder<span class="op">=</span><span class="dv">1</span>, linestyle<span class="op">=</span><span class="st">"--"</span>)</span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    ax.scatter([i <span class="cf">for</span> i <span class="kw">in</span> x <span class="cf">if</span> have[i]], vals[have], s<span class="op">=</span><span class="dv">140</span>,</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    pts <span class="op">=</span> ax.scatter([i <span class="cf">for</span> i <span class="kw">in</span> x <span class="cf">if</span> have[i]], vals[have], s<span class="op">=</span><span class="dv">140</span>,</span>
 <span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>               c<span class="op">=</span>[colors[i] <span class="cf">for</span> i <span class="kw">in</span> x <span class="cf">if</span> have[i]], zorder<span class="op">=</span><span class="dv">2</span>,</span>
 <span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>               edgecolor<span class="op">=</span><span class="st">"white"</span>, linewidth<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    ax.set_ylabel(ylabel, fontsize<span class="op">=</span><span class="dv">10</span>)</span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    ax.set_xticks(<span class="bu">list</span>(x))</span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    ax.set_xticklabels([<span class="bu">str</span>(i <span class="op">+</span> <span class="dv">1</span>) <span class="cf">for</span> i <span class="kw">in</span> x], fontsize<span class="op">=</span><span class="dv">9</span>)</span>
-<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>    ax.set_xlabel(<span class="st">"submission #"</span>, fontsize<span class="op">=</span><span class="dv">9</span>)</span>
-<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    ax.spines[[<span class="st">"top"</span>, <span class="st">"right"</span>]].set_visible(<span class="va">False</span>)</span>
-<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    lo, hi <span class="op">=</span> vals.<span class="bu">min</span>(), vals.<span class="bu">max</span>()</span>
-<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    pad <span class="op">=</span> (hi <span class="op">-</span> lo) <span class="op">*</span> <span class="fl">0.3</span> <span class="cf">if</span> hi <span class="op">&gt;</span> lo <span class="cf">else</span> hi <span class="op">*</span> <span class="fl">0.1</span></span>
-<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>    ax.set_ylim(<span class="bu">max</span>(<span class="dv">0</span>, lo <span class="op">-</span> pad), hi <span class="op">+</span> pad)</span>
-<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>fig.legend(handles<span class="op">=</span>[</span>
-<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>    plt.Line2D([<span class="dv">0</span>], [<span class="dv">0</span>], marker<span class="op">=</span><span class="st">"o"</span>, color<span class="op">=</span><span class="st">"w"</span>, markerfacecolor<span class="op">=</span><span class="st">"#2ecc71"</span>, markersize<span class="op">=</span><span class="dv">10</span>, label<span class="op">=</span><span class="st">"best result"</span>),</span>
-<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>    plt.Line2D([<span class="dv">0</span>], [<span class="dv">0</span>], marker<span class="op">=</span><span class="st">"o"</span>, color<span class="op">=</span><span class="st">"w"</span>, markerfacecolor<span class="op">=</span><span class="st">"#e74c3c"</span>, markersize<span class="op">=</span><span class="dv">10</span>, label<span class="op">=</span><span class="st">"scored badly (known bug)"</span>),</span>
-<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>    plt.Line2D([<span class="dv">0</span>], [<span class="dv">0</span>], marker<span class="op">=</span><span class="st">"o"</span>, color<span class="op">=</span><span class="st">"w"</span>, markerfacecolor<span class="op">=</span><span class="st">"#7f8c8d"</span>, markersize<span class="op">=</span><span class="dv">10</span>, label<span class="op">=</span><span class="st">"intermediate"</span>),</span>
-<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>], loc<span class="op">=</span><span class="st">"upper center"</span>, bbox_to_anchor<span class="op">=</span>(<span class="fl">0.5</span>, <span class="fl">1.12</span>), ncol<span class="op">=</span><span class="dv">3</span>, fontsize<span class="op">=</span><span class="dv">9</span>, frameon<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
-<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> x:</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> have[i]:</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>            ax.annotate(<span class="ss">f"</span><span class="sc">{</span>vals[i]<span class="sc">:.0f}</span><span class="ss">"</span> <span class="cf">if</span> col <span class="op">==</span> <span class="st">"fid_avg"</span> <span class="cf">else</span> <span class="ss">f"</span><span class="sc">{</span>vals[i]<span class="sc">:.2f}</span><span class="ss">"</span>,</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>                        (i, vals[i]), textcoords<span class="op">=</span><span class="st">"offset points"</span>, xytext<span class="op">=</span>(<span class="dv">0</span>, <span class="dv">9</span>),</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>                        ha<span class="op">=</span><span class="st">"center"</span>, fontsize<span class="op">=</span><span class="fl">7.5</span>, color<span class="op">=</span><span class="st">"#333"</span>)</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    ax.set_ylabel(ylabel, fontsize<span class="op">=</span><span class="dv">10</span>)</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    ax.set_xticks(<span class="bu">list</span>(x))</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>    ax.set_xticklabels([<span class="bu">str</span>(i <span class="op">+</span> <span class="dv">1</span>) <span class="cf">for</span> i <span class="kw">in</span> x], fontsize<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>    ax.set_xlabel(<span class="st">"submission #"</span>, fontsize<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>    ax.spines[[<span class="st">"top"</span>, <span class="st">"right"</span>]].set_visible(<span class="va">False</span>)</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>    lo, hi <span class="op">=</span> vals.<span class="bu">min</span>(), vals.<span class="bu">max</span>()</span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> log:</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>        ax.set_yscale(<span class="st">"log"</span>)</span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>        ax.set_ylim(lo <span class="op">/</span> <span class="fl">1.6</span>, hi <span class="op">*</span> <span class="fl">1.6</span>)</span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>        pad <span class="op">=</span> (hi <span class="op">-</span> lo) <span class="op">*</span> <span class="fl">0.3</span> <span class="cf">if</span> hi <span class="op">&gt;</span> lo <span class="cf">else</span> hi <span class="op">*</span> <span class="fl">0.1</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>        ax.set_ylim(<span class="bu">max</span>(<span class="dv">0</span>, lo <span class="op">-</span> pad), hi <span class="op">+</span> pad)</span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>fig.legend(handles<span class="op">=</span>[</span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>    plt.Line2D([<span class="dv">0</span>], [<span class="dv">0</span>], marker<span class="op">=</span><span class="st">"o"</span>, color<span class="op">=</span><span class="st">"w"</span>, markerfacecolor<span class="op">=</span><span class="st">"#2ecc71"</span>, markersize<span class="op">=</span><span class="dv">10</span>, label<span class="op">=</span><span class="st">"best result"</span>),</span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>    plt.Line2D([<span class="dv">0</span>], [<span class="dv">0</span>], marker<span class="op">=</span><span class="st">"o"</span>, color<span class="op">=</span><span class="st">"w"</span>, markerfacecolor<span class="op">=</span><span class="st">"#e74c3c"</span>, markersize<span class="op">=</span><span class="dv">10</span>, label<span class="op">=</span><span class="st">"scored badly (known bug)"</span>),</span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>    plt.Line2D([<span class="dv">0</span>], [<span class="dv">0</span>], marker<span class="op">=</span><span class="st">"o"</span>, color<span class="op">=</span><span class="st">"w"</span>, markerfacecolor<span class="op">=</span><span class="st">"#7f8c8d"</span>, markersize<span class="op">=</span><span class="dv">10</span>, label<span class="op">=</span><span class="st">"intermediate"</span>),</span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>], loc<span class="op">=</span><span class="st">"upper center"</span>, bbox_to_anchor<span class="op">=</span>(<span class="fl">0.5</span>, <span class="fl">1.12</span>), ncol<span class="op">=</span><span class="dv">3</span>, fontsize<span class="op">=</span><span class="dv">9</span>, frameon<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-display">
 <div id="fig-eval-progression" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-eval-progression-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="index_files/figure-html/fig-eval-progression-output-1.png" width="1142" height="448" class="figure-img">
+<img src="index_files/figure-html/fig-eval-progression-output-1.png" width="1140" height="448" class="figure-img">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-eval-progression-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 Figure&nbsp;3: All three challenge metrics across the submission cycle’s real, scored runs. FVD/FID lower is better; CLIP higher is better. FID/CLIP were only logged from the point we started tracking them per-submission.
@@ -434,7 +443,7 @@ Figure&nbsp;3: All three challenge metrics across the submission cycle’s real,
 </div>
 </div>
 </div>
-<div id="5d3de27e" class="cell" data-execution_count="4">
+<div id="182de336" class="cell" data-execution_count="4">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="4">
 <table class="caption-top table table-sm table-striped small">
 <colgroup>
@@ -465,8 +474,8 @@ Figure&nbsp;3: All three challenge metrics across the submission cycle’s real,
 <td style="text-align: right;">2</td>
 <td style="text-align: left;">Early real submission (bug)</td>
 <td style="text-align: right;">0.53</td>
-<td style="text-align: right;">nan</td>
-<td style="text-align: right;">nan</td>
+<td style="text-align: right;">181.51</td>
+<td style="text-align: right;">35.29</td>
 </tr>
 <tr class="odd">
 <td style="text-align: right;">3</td>
@@ -477,13 +486,20 @@ Figure&nbsp;3: All three challenge metrics across the submission cycle’s real,
 </tr>
 <tr class="even">
 <td style="text-align: right;">4</td>
+<td style="text-align: left;">xy=1.0mm + SR adapter</td>
+<td style="text-align: right;">0.24</td>
+<td style="text-align: right;">565.31</td>
+<td style="text-align: right;">19.66</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">5</td>
 <td style="text-align: left;">Session best</td>
 <td style="text-align: right;">0.24</td>
 <td style="text-align: right;">90.23</td>
 <td style="text-align: right;">28.54</td>
 </tr>
-<tr class="odd">
-<td style="text-align: right;">5</td>
+<tr class="even">
+<td style="text-align: right;">6</td>
 <td style="text-align: left;">Final (CLIP safety net silently broken)</td>
 <td style="text-align: right;">0.35</td>
 <td style="text-align: right;">92.87</td>
@@ -493,9 +509,11 @@ Figure&nbsp;3: All three challenge metrics across the submission cycle’s real,
 </table>
 </div>
 </div>
-<p>Green = the cycle’s best FVD; red = a run that scored badly for a real, identified reason; grey = intermediate points. FID and CLIP weren’t logged for the first three runs (before we started tracking per-metric scores per submission), so those two panels only show the last two. That’s also the point worth making explicitly: FVD alone makes the last submission look like a step backward from the session best, but FID barely moved (90.2 → 92.9) and CLIP actually <em>improved slightly</em> (28.5 → 29.7) — the regression is concentrated in FVD specifically, consistent with the root cause (a diagnostic, feature-space-distribution issue caused by the broken CLIP safety net) rather than a wholesale quality collapse. The dip and recovery in the middle of the FVD panel is the Dockerfile-ENV-mismatch and degenerate-candidate bugs described below; the spike on the right is the CLIP-safety-net bug, also described below — both are real regressions with real root causes, not noise.</p>
+<p>Green = a best-FVD-so-far result; red = a run that scored badly for a real, identified reason; grey = intermediate points. FID and CLIP weren’t logged for the very first (pre-cycle) and the Dockerfile-ENV-mismatch runs, so those two panels are missing points 1 and 3.</p>
+<p>Two things worth reading off this directly rather than from FVD alone. First, submission 6 (final) vs.&nbsp;submission 5 (session best): FVD alone makes it look like a step backward, but FID barely moved (90.2 → 92.9) and CLIP actually <em>improved slightly</em> (28.5 → 29.7) — the regression is concentrated in FVD specifically, consistent with the root cause (a diagnostic, feature-space-distribution issue caused by the broken CLIP safety net) rather than a wholesale quality collapse. Second, and more strikingly: submission 4 (<code>xy=1.0mm</code>) has the single best FVD of the entire cycle (0.243) <em>and</em> by far the worst FID (565, roughly 6x every other run) — a genuine case of two metrics actively disagreeing, not just one being noisier than the other. That one’s explained below.</p>
 <p><strong>The 256-frame ceiling.</strong> Our training data preprocessing center-crops every volume to 256 slices. That’s an invisible hard boundary: whatever the autoregressive model draws past 256 frames, it has <em>never seen anything like it</em> in training, regardless of prompt. An early real submission scored badly (FVD 0.53) for exactly this reason — nothing wrong with the model, we just let generation run past the one boundary that mattered. Capping <code>max_blocks</code> at 16 (16×16 = 256 frames) fixed it immediately.</p>
 <p><strong>Declared vs.&nbsp;conditioned spacing.</strong> This is a post-processing decoupling, not a learned conditioning branch — the model itself has no spacing input. We found, empirically, that treating the generation as a <em>coarser</em> z-spacing (3.0mm) than what we actually declare in the output header (1.5mm, or an adaptive value computed to keep every volume’s block at a fixed 384mm physical extent) nudges it toward more anatomically varied output — real content doesn’t get proportionally rescaled just because we relabel the header, so this is a legitimate (if slightly hacky) way to push generation out of a repetitive part of its learned distribution. This one small decoupling outperformed every geometry variant we tried against the actual challenge FID/FVD metrics.</p>
+<p><strong>When two metrics actively disagree.</strong> Before landing on xy=0.75mm, we tried declaring the in-plane spacing as exactly 1.0mm (matching the champion team’s reference config) with the SR adapter doing the upsampling. That submission scored the best FVD of the entire cycle (0.243) — and the worst FID by a wide margin (565 average, vs.&nbsp;90–185 on every other run; the XZ/YZ planes alone hit 478 and 897). Our working theory: the FID evaluator itself resamples every volume to 1.0mm before extracting features. Declare exactly 1.0mm and that resample step becomes a no-op — whatever slice-to-slice inconsistency the SR adapter introduces passes straight through unfiltered, instead of being smoothed out by FID’s own preprocessing the way it is for every other spacing we declared. FVD uses a different resample target, so it never saw the same effect. We reverted to 0.75mm (keeping the adapter) and got both a better FID <em>and</em> the session’s best FVD — but the fact that the single best FVD result of the whole cycle came attached to the single worst FID result is a good reminder that these metrics measure genuinely different things and can move in opposite directions from the same change.</p>
 <p><strong>A selection-method dead end.</strong> We tried scoring candidates by Mahalanobis “typicality” against the published dataset’s feature distribution and picking the most typical one. It measurably <em>hurt</em> FVD (0.24 → 0.40) — it shrinks the effective covariance of what gets published, making outputs too safe/average relative to real data’s actual spread. Good reminder that “pick the most normal-looking one” and “match the real distribution” are not the same objective.</p>
 <p><strong>A seed bug that only showed up in retrospect.</strong> Our candidate-diversity scheme used seeds of the form <code>base + 977*k</code>. For <code>k = 1..4</code>, this combination deterministically triggered the model’s early-stop condition on the very first block, <em>regardless of prompt content</em> — confirmed by testing the same seeds against four different real reports. For most of the cycle this silently made our “5 diverse candidates” selection effectively “1 real candidate + 4 immediate no-ops,” which we didn’t catch because the no-ops get filtered out before scoring, so nothing looked obviously wrong. We replaced the formula with a small pool of seeds individually verified non-degenerate across multiple real prompts.</p>
 <p><strong>A safety net that silently never ran.</strong> We added a CT-CLIP-based quality check late in the cycle: score the selected candidate against its own report text, and if it scores below 0.5, redraw with a backup seed pool and take whichever of the combined pool scores highest — a real guardrail against selecting an anatomically-plausible-but-semantically- wrong candidate. It worked in every local test. It did not work in the actual submission: the vendored CT-CLIP source has its own hardcoded <code>BertTokenizer.from_pretrained('microsoft/BiomedVLP-CXR-BERT-specialized')</code> call, buried inside the model class constructor, completely independent of the local path we were correctly passing everywhere else. Local testing has internet access, so that line quietly succeeded by phoning home to the Hub; the actual submission container runs fully offline (<code>TRANSFORMERS_OFFLINE=1</code>), where it failed, got caught by an exception handler, and the whole safety net silently no-op’d for the entire 100-prompt run — CLIP scores were computed, thresholds checked, nothing printed to indicate anything was wrong, because “print nothing extra” was exactly what the success path did too. One submission’s worth of real compute spent validating a component that had never actually run once. Fixed by pointing that specific line at the local path when it exists, falling back to the Hub id otherwise.</p>

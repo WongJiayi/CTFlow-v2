@@ -293,7 +293,7 @@ base paper and, for this year's system specifically, this repository:
 
 @misc{wang2026ctflowv2,
   title        = {CTFlow v2: VLM3D 2026 Submission},
-  author       = {Wang, Jiayi},
+  author       = {Wang, Jiayi and Reynaud, Hadrien and N\"{u}tzel, Felix and Durug\"{o}l, \"{O}mer Faruk and Spasojevic, Teodora and Hagen, Luca and Kainz, Bernhard},
   year         = {2026},
   howpublished = {\url{https://github.com/WongJiayi/CTFlow-v2}},
   note         = {Model weights and inference code: \url{https://huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026}}

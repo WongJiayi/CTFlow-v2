@@ -141,7 +141,7 @@ for ax, title in zip(axes[:, 0], row_titles):
 for row in range(n_panel_types):
     for col in range(n_cols):
         ax = axes[row, col]
-        ax.imshow(panels[row, col], cmap="gray", vmin=0, vmax=255)
+        ax.imshow(np.rot90(panels[row, col], k=-1), cmap="gray", vmin=0, vmax=255)  # 90 deg clockwise
         ax.set_xticks([]); ax.set_yticks([])
         for spine in ax.spines.values():
             spine.set_visible(False)

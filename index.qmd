@@ -346,8 +346,7 @@ Markdown(tbl.to_markdown(index=False))
 Green = the actual final submission (the one that shipped); red = a run
 that scored badly for a real, identified reason; grey = intermediate
 reference points. FID and CLIP weren't logged for the very first
-(pre-cycle) and the Dockerfile-ENV-mismatch runs, so those two panels are
-missing points 1 and 3.
+(pre-cycle) run, so those two panels are missing point 1.
 
 Three things worth reading off this directly rather than from FVD alone.
 First, submission 6 (CLIP safety net silently broken) vs. submission 5

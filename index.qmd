@@ -337,7 +337,10 @@ from IPython.display import Markdown
 tbl = df[["label", "fvd", "fid_avg", "clip_avg"]].rename(
     columns={"label": "Submission", "fvd": "FVD", "fid_avg": "FID avg", "clip_avg": "CLIP avg"})
 tbl.insert(0, "#", range(1, len(tbl) + 1))
-Markdown(tbl.to_markdown(index=False, floatfmt=".2f"))
+tbl["FVD"] = tbl["FVD"].map(lambda v: f"{v:.2f}")
+tbl["FID avg"] = tbl["FID avg"].map(lambda v: f"{v:.2f}" if pd.notna(v) else "—")
+tbl["CLIP avg"] = tbl["CLIP avg"].map(lambda v: f"{v:.2f}" if pd.notna(v) else "—")
+Markdown(tbl.to_markdown(index=False))
 ```
 
 Green = a best-FVD-so-far result; red = a run that scored badly for a
@@ -503,12 +506,12 @@ finishes.
     <figcaption>valid_17_a_1 — "Trachea, both main bronchi are open. Mediastinal main vascular structures, heart contour…"</figcaption>
   </figure>
   <figure>
-    <video src="data/demo_videos/valid_24_a_1.mp4" controls loop muted playsinline></video>
-    <figcaption>valid_24_a_1 — "Trachea and both main bronchi are open. No occlusive pathology was detected in the trachea…"</figcaption>
+    <video src="data/demo_videos/valid_11_a_1.mp4" controls loop muted playsinline></video>
+    <figcaption>valid_11_a_1 — "Trachea and both main bronchi are normal. Occlusion in trachea and both main bronchi Not g…"</figcaption>
   </figure>
   <figure>
-    <video src="data/demo_videos/valid_38_a_1.mp4" controls loop muted playsinline></video>
-    <figcaption>valid_38_a_1 — "The size of the thyroid gland has increased and has a heterogeneous appearance…"</figcaption>
+    <video src="data/demo_videos/valid_20_a_1.mp4" controls loop muted playsinline></video>
+    <figcaption>valid_20_a_1 — "Trachea, both main bronchi are open. Mediastinal main vascular structures, heart contour…"</figcaption>
   </figure>
 </div>
 ```

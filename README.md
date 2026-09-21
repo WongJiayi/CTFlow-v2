@@ -99,6 +99,22 @@ down to 0.075 by step 10,000, so reconstruction gets to refine cleanly in
 the back half of training. We also supervise multiple interpolation
 points per pair ($\alpha \in \{0.3, 0.5, 0.7\}$), not just the midpoint.
 
+![Qualitative comparison of latent interpolations before and after VAE fine-tuning](images/vae_connectivity_qualitative.png)
+
+Six pairs of CT slices, each row picked from a different anatomical
+region. `Recon` columns show that fine-tuning doesn't cost reconstruction
+quality — both VAEs faithfully reproduce the input. The `Slerp` columns
+are the actual test: decode the midpoint between $z_i$ and $z_j$ with no
+real image ever having produced it. With the **original VAE**, that
+midpoint is visibly broken — a fine-grained checkerboard texture stamped
+over blurred, structurally wrong anatomy, worse the further apart the two
+source slices are (see row 4, where $z_j$ is a mostly-empty top-of-lung
+slice). With the **fine-tuned VAE**, the same midpoints look like
+plausible intermediate anatomy: coherent organ boundaries, no grid
+artifacts, structure that's obviously *between* the two endpoints rather
+than a broken average of them. This is the failure mode the connectivity
+loss is directly targeting, made visible.
+
 ### Did it work
 
 | Method | PSNR ↑ | rFID ↓ | iFID ↓ | Gap ↓ |
@@ -114,10 +130,18 @@ The production configuration cuts the disconnection gap by ~60% relative
 to the pretrained baseline (55.55 → 22.49), at the cost of a few points
 of rFID — a reasonable trade given rFID measures something we don't
 directly optimize for generation quality. We also looked at the
-distribution, not just the mean: kernel density estimates of per-sample
-interpolation PSNR show the production model and the pretrained VAE both
-have a real mass of low-PSNR (genuinely novel, non-collapsed) midpoints,
-while the ablation variants concentrate at higher PSNR — i.e. their
+distribution, not just the mean:
+
+![KDE of per-sample interpolation PSNR across VAE variants](images/psnr_kde_combined.png)
+
+For each validation sample, slerp it against its nearest neighbor,
+decode, and take the higher of its PSNR against either endpoint —
+*lower* PSNR means the decoded midpoint is genuinely distinct from both
+endpoints, not just a copy of the closer one. Kernel density estimates of
+per-sample interpolation PSNR show the production model and the
+pretrained VAE both have a real mass of low-PSNR (genuinely novel,
+non-collapsed) midpoints, while the ablation variants concentrate at
+higher PSNR — i.e. their
 "interpolations" are closer to just reproducing an endpoint. Schedule and
 multi-α mattered; none of the individual loss terms alone got us there.
 
@@ -248,3 +272,25 @@ overclaimed:
   [huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026](https://huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026)
 - Synthetic CT-RATE validation set (1,516 unique reports, one generation
   each): *link to follow once the run finishes.*
+
+## Citation
+
+If you use CTFlow, the fine-tuned VAE, or this write-up, please cite the
+base paper and, for this year's system specifically, this repository:
+
+```bibtex
+@article{wang2025ctflow,
+  title   = {CTFlow: Video-Inspired Latent Flow Matching for 3D CT Synthesis},
+  author  = {Wang, Jiayi and Reynaud, Hadrien and Erick, Franciskus Xaverius and Kainz, Bernhard},
+  journal = {arXiv preprint arXiv:2508.12900},
+  year    = {2025}
+}
+
+@misc{wang2026ctflowv2,
+  title        = {CTFlow v2: VLM3D 2026 Submission},
+  author       = {Wang, Jiayi},
+  year         = {2026},
+  howpublished = {\url{https://github.com/WongJiayi/CTFlow-v2}},
+  note         = {Model weights and inference code: \url{https://huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026}}
+}
+```

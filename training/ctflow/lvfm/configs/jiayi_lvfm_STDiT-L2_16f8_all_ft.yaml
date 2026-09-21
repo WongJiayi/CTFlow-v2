@@ -1,0 +1,117 @@
+globals:
+  target_fps: 32
+  target_nframes: 16
+  outputs: ["video", "image"]
+  resolution: 256
+  latent_res: 32
+  latent_channels: 16
+  max_steps: 1000_000
+
+max_train_steps: ${globals.max_steps}
+gradient_accumulation_steps: 2
+mixed_precision: "bf16"
+use_ema: true
+max_grad_norm: 1.0
+max_grad_value: -1
+sample_latents: true
+
+denoiser:
+    target: ctflow.common.models.DiffuserSTDiT
+    args:
+        input_size:
+          - ${globals.target_nframes}
+          - ${globals.latent_res}
+          - ${globals.latent_res}
+        in_channels: 32
+        out_channels: ${globals.latent_channels}
+        patch_size: [2, 2, 2]
+        hidden_size: 1024
+        depth: 24
+        num_heads: 16
+        mlp_ratio: 4.0
+        class_dropout_prob: 0.0
+        drop_path: 0.0
+        no_temporal_pos_emb: false
+        caption_channels: 768
+        model_max_length: 1
+        space_scale: 1.0
+        time_scale: 1.0
+        enable_flashattn: false
+
+optimizer:
+  target: torch.optim.AdamW
+  args:
+    lr: 2e-4
+    betas: [0.9, 0.999]
+    weight_decay: 1e-2
+    eps: 1e-08
+
+scheduler:
+  target: ctflow.common.schedulers.StepBasedLearningRateScheduleWithWarmup
+  args:
+    warmup_steps: 2000
+    ref_steps: 1000000
+    eta_min: 1e-6
+    decay_rate: 2.0
+
+vae:
+  target: diffusers.AutoencoderKL
+  pretrained: /path/to/workspace/FLUX_vae_checkpoint
+
+datasets:
+    - name: LatentBlock
+      active: true
+      params:
+        root_dir: ${LATTE_TRAIN_DATA_ROOT}
+        embedding_dir: ${LATTE_EMBEDDING_ROOT}
+        block_size: 16
+        black_block_prob: 0.3
+
+val_datasets:
+    - name: LatentBlock
+      active: true
+      params:
+        root_dir: ${LATTE_VALID_DATA_ROOT}
+        embedding_dir: ${LATTE_VALID_EMBEDDING_ROOT}
+        block_size: 16
+        black_block_prob: 0.3
+
+dataloader:
+  target: torch.utils.data.DataLoader
+  args:
+    shuffle: true
+    batch_size: 16
+    num_workers: 32
+    pin_memory: true
+    drop_last: true
+    persistent_workers: true
+
+noise_offset: 0.05
+noise_cond_image: 0.05
+no_conditionning: False
+p_drop_conditionning: 0.1
+guidance_scale: 7.5
+
+output_dir: /path/to/workspace/experiments/${wandb_args.name}
+logging_dir: logs
+
+report_to: wandb
+wandb_args:
+  project: CTsyn
+  name: lvfm_STDiT-L2_16f8_ft_vae_16node_3
+  group: lvfm
+  id: lvfm_STDiT-L2_16f8_ft_vae_16node_3
+
+checkpointing_steps: 2_000
+checkpoints_to_keep: [50000, 100000, 200000, 400000, 600000, 800000, 1000000]
+resume_from_checkpoint: latest
+if_fine_tuned: false
+
+validation:
+  samples: 4
+  steps: 5_000
+  timesteps: 25
+  frames: ${globals.target_nframes}
+  fps: ${globals.target_fps}
+
+seed: 42

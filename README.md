@@ -15,6 +15,7 @@ final submission cycle fighting a string of very unglamorous bugs to get
 the result out the door. Both halves are worth writing down.
 
 Links: [model + inference code](https://huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026)
+· [training code](training/) (this repo, no weights)
 · synthetic dataset (link added once the generation run finishes — see the
 end of this post).
 
@@ -182,15 +183,17 @@ wrong with the model, we just let generation run past the one boundary
 that mattered. Capping `max_blocks` at 16 (16×16 = 256 frames) fixed it
 immediately.
 
-**Declared vs. conditioned spacing.** We found, empirically, that
-conditioning the model on a *coarser* z-spacing (3.0mm) than what we
-actually declare in the output header (1.5mm, or an adaptive value
-computed to keep every volume's block at a fixed 384mm physical extent)
-nudges it toward more anatomically varied output — the model doesn't
-proportionally rescale real content to whatever spacing it's told, so
-this is a legitimate (if slightly hacky) way to push it out of a
-repetitive part of its learned distribution. This one small decoupling
-outperformed every geometry variant we tried against the actual
+**Declared vs. conditioned spacing.** This is a post-processing decoupling,
+not a learned conditioning branch — the model itself has no spacing input.
+We found, empirically, that treating the generation as a *coarser*
+z-spacing (3.0mm) than what we actually declare in the output header
+(1.5mm, or an adaptive value computed to keep every volume's block at a
+fixed 384mm physical extent) nudges it toward more anatomically varied
+output — real content doesn't get proportionally rescaled just because we
+relabel the header, so this is a legitimate (if slightly hacky) way to
+push generation out of a repetitive part of its learned distribution.
+This one small decoupling outperformed every geometry variant we tried
+against the actual
 challenge FID/FVD metrics.
 
 **A selection-method dead end.** We tried scoring candidates by
@@ -271,6 +274,7 @@ overclaimed:
 
 - Model + inference pipeline + the exact submitted container:
   [huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026](https://huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026)
+- Training code (this repo, no weights): [`training/`](training/)
 - Synthetic CT-RATE validation set (1,516 unique reports, one generation
   each): *link to follow once the run finishes.*
 

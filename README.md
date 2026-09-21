@@ -31,10 +31,11 @@ what changed is the VAE it decodes into, whether it was trained with
 classifier-free guidance, and, in the final weeks, a long list of
 inference-time fixes.
 
-Last year's submission script was `inference_bs_h_2gpus.py`, running the
-base STDiT checkpoint (`checkpoint-680000`) against the stock VAE, no
-guidance dropout during training (`p_drop_conditionning: 0.0` — the model
-was never taught to produce a meaningful unconditional prediction).
+Last year's submission script was [`inference_bs_h_2gpus.py`](https://github.com/WongJiayi/CTFlow),
+running the base STDiT checkpoint (`checkpoint-680000`) against the stock
+VAE, no guidance dropout during training (`p_drop_conditionning: 0.0` —
+the model was never taught to produce a meaningful unconditional
+prediction).
 
 ## Change 1: fine-tuning the VAE for latent connectivity
 

@@ -1,0 +1,6 @@
+label,fvd,fid_avg,clip_avg,note
+Historical best (pre-cycle),0.2388,,,median-jerk + native-1.5mm z geometry
+Early real submission (bug),0.5264,,,autoregressive generation past the 256-frame training boundary
+Recovered but still buggy,0.3242,,,Dockerfile ENV mismatch + degenerate-candidate median poisoning
+Session best,0.2393,90.23,28.54,xy=0.75mm + SR adapter + median-jerk selection
+Final (CLIP safety net silently broken),0.3522,92.87,29.72,offline tokenizer bug meant CLIP retry never actually ran

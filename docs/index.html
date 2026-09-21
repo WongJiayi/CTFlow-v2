@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-09-21">
+
+<title>CTFlow v2: a connected latent space, and a week of very dumb bugs</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="index_files/libs/clipboard/clipboard.min.js"></script>
+<script src="index_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="index_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="index_files/libs/quarto-html/popper.min.js"></script>
+<script src="index_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="index_files/libs/quarto-html/anchor.min.js"></script>
+<link href="index_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="index_files/libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="index_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="index_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="index_files/libs/bootstrap/bootstrap-01d9e6307925b56a9fb0c10e9e2da4fa.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#the-architecture-briefly" id="toc-the-architecture-briefly" class="nav-link active" data-scroll-target="#the-architecture-briefly">The architecture, briefly</a></li>
+  <li><a href="#change-1-fine-tuning-the-vae-for-latent-connectivity" id="toc-change-1-fine-tuning-the-vae-for-latent-connectivity" class="nav-link" data-scroll-target="#change-1-fine-tuning-the-vae-for-latent-connectivity">Change 1: fine-tuning the VAE for latent connectivity</a>
+  <ul class="collapse">
+  <li><a href="#roi-aware-connectivity-loss" id="toc-roi-aware-connectivity-loss" class="nav-link" data-scroll-target="#roi-aware-connectivity-loss">ROI-aware connectivity loss</a></li>
+  <li><a href="#did-it-work" id="toc-did-it-work" class="nav-link" data-scroll-target="#did-it-work">Did it work</a></li>
+  </ul></li>
+  <li><a href="#change-2-classifier-free-guidance" id="toc-change-2-classifier-free-guidance" class="nav-link" data-scroll-target="#change-2-classifier-free-guidance">Change 2: classifier-free guidance</a></li>
+  <li><a href="#the-submission-cycle-what-actually-broke" id="toc-the-submission-cycle-what-actually-broke" class="nav-link" data-scroll-target="#the-submission-cycle-what-actually-broke">The submission cycle: what actually broke</a></li>
+  <li><a href="#where-it-landed-and-whats-still-open" id="toc-where-it-landed-and-whats-still-open" class="nav-link" data-scroll-target="#where-it-landed-and-whats-still-open">Where it landed, and what’s still open</a></li>
+  <li><a href="#links" id="toc-links" class="nav-link" data-scroll-target="#links">Links</a></li>
+  <li><a href="#citation" id="toc-citation" class="nav-link" data-scroll-target="#citation">Citation</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">CTFlow v2: a connected latent space, and a week of very dumb bugs</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">September 21, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>This is a retrospective on our second submission to the VLM3D / CT-RATE text-to-CT challenge — a text-conditioned generative model that turns a radiology report into a synthetic chest CT volume. Last year’s system worked. This year we went after the two things we thought were actually limiting it — the VAE and classifier-free guidance — and then spent the final submission cycle fighting a string of very unglamorous bugs to get the result out the door. Both halves are worth writing down.</p>
+<p>Links: <a href="https://huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026">model + inference code</a> · <a href="training/">training code</a> (this repo, no weights) · synthetic dataset (link added once the generation run finishes — see the end of this post).</p>
+<p>Every figure below (VAE connectivity grid, PSNR-KDE plot, and the submission-score chart) is a live matplotlib cell reading from the small cached arrays in <code>data/</code> — click “Show the plotting code” on any of them to see exactly how it’s drawn.</p>
+<section id="the-architecture-briefly" class="level2">
+<h2 class="anchored" data-anchor-id="the-architecture-briefly">The architecture, briefly</h2>
+<p>CTFlow generates a CT volume autoregressively, block by block, in the latent space of a VAE. A flow-matching transformer (STDiT-style) predicts each new 16-frame latent block conditioned on (a) a text embedding of the radiology report, encoded with BiomedVLP-CXR-BERT, and (b) the previous block, so the model has continuity information to extend from. A learned super-resolution adapter upsamples the final in-plane resolution to 512×512. This backbone didn’t change between last year and this year — what changed is the VAE it decodes into, whether it was trained with classifier-free guidance, and, in the final weeks, a long list of inference-time fixes.</p>
+<p>Last year’s submission script was <a href="https://github.com/WongJiayi/CTFlow"><code>inference_bs_h_2gpus.py</code></a>, running the base STDiT checkpoint (<code>checkpoint-680000</code>) against the stock VAE, no guidance dropout during training (<code>p_drop_conditionning: 0.0</code> — the model was never taught to produce a meaningful unconditional prediction).</p>
+</section>
+<section id="change-1-fine-tuning-the-vae-for-latent-connectivity" class="level2">
+<h2 class="anchored" data-anchor-id="change-1-fine-tuning-the-vae-for-latent-connectivity">Change 1: fine-tuning the VAE for latent connectivity</h2>
+<p>The stock VAE reconstructs individual CT slices fine, but its latent space isn’t <em>connected</em> in the sense that matters for flow matching: take two real latents, interpolate between them, decode the midpoint, and you often get an anatomically implausible image — ghosting, structural artifacts, tissue that doesn’t correspond to any real CT. If the transformer’s flow-matching process has to pass through regions of latent space like that on its way from noise to a valid sample, that’s a direct tax on generation quality.</p>
+<p>We measure this with <strong>interpolated FID (iFID)</strong>, following Xu et al.: encode two samples, slerp to the midpoint, decode, and compute FID of the decoded midpoints against real data. A model with a well-connected latent space produces midpoints that still look like real CT; a disconnected one doesn’t. The gap between iFID and ordinary reconstruction FID (rFID) is a direct measure of <em>how much worse</em> interpolated latents are than latents straight from the encoder — that’s what we’re targeting.</p>
+<section id="roi-aware-connectivity-loss" class="level3">
+<h3 class="anchored" data-anchor-id="roi-aware-connectivity-loss">ROI-aware connectivity loss</h3>
+<p>Generic connectivity losses (DINO-feature alignment, EQ-VAE-style geometric consistency) exist for natural images, but they don’t account for something specific to medical volumes: diagnostic content is concentrated in high-gradient regions (organ boundaries, lesions, tissue interfaces), while large areas — background, uniform soft tissue — carry almost no signal (on abdominal CT, ~98% of spectral energy sits in low-frequency components). Enforcing uniform connectivity everywhere wastes loss budget on regions nobody cares about.</p>
+<p>So during VAE fine-tuning, for each training pair <span class="math inline">\((x_a, x_b)\)</span> in a batch we:</p>
+<ol type="1">
+<li>Encode both, take the posterior means <span class="math inline">\(z_a, z_b\)</span>.</li>
+<li>Slerp to a midpoint <span class="math inline">\(\hat z_{ab}(\alpha)\)</span> (spherical, not linear, to respect the Gaussian prior), decode it to <span class="math inline">\(\hat x_{ab}\)</span>.</li>
+<li>Build a binary ROI mask from a Sobel edge map of <span class="math inline">\(x_a\)</span> and <span class="math inline">\(x_b\)</span> (union of both), thresholded at 0.1 of the max gradient magnitude.</li>
+<li>Compute the connectivity loss as the <em>minimum</em> LPIPS distance, restricted to the ROI mask, between <span class="math inline">\(\hat x_{ab}\)</span> and each of the two endpoints:</li>
+</ol>
+<p><span class="math display">\[
+\mathcal{L}_{\text{ROI}} = \min\Big(
+  d_{\text{LPIPS}}(\hat x_{ab}\!\odot\! M, x_a\!\odot\! M),\;
+  d_{\text{LPIPS}}(\hat x_{ab}\!\odot\! M, x_b\!\odot\! M)
+\Big)
+\]</span></p>
+<p>The min (rather than forcing the midpoint to match a pixel-blend of both endpoints) just asks that the midpoint stay plausible with respect to <em>at least one</em> endpoint in the regions that matter — a much easier and more honest target than exact interpolation.</p>
+<p>Full objective: standard reconstruction (L1 + LPIPS + adversarial) + KL + this connectivity term, with two schedules layered on top — KL ramps linearly from step 1,000–3,000 to a plateau of 1e-2 (immediately turning on all losses destabilizes the encoder early), and the ROI weight has a delayed ramp (steps 2,000–5,000, up to 0.15) followed by cosine annealing down to 0.075 by step 10,000, so reconstruction gets to refine cleanly in the back half of training. We also supervise multiple interpolation points per pair (<span class="math inline">\(\alpha \in \{0.3, 0.5, 0.7\}\)</span>), not just the midpoint.</p>
+<div id="cell-fig-connectivity" class="cell" data-fig-height="11" data-fig-width="11" data-execution_count="1">
+<details class="code-fold">
+<summary>Show the plotting code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>panels <span class="op">=</span> np.load(<span class="st">"data/method_figure_panels.npz"</span>)[<span class="st">"panels"</span>]  <span class="co"># (6 pairs, 6 panel-types, 256, 256) uint8</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>panels <span class="op">=</span> panels.transpose(<span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">3</span>)  <span class="co"># -&gt; (6 panel-types, 6 pairs, 256, 256): rotate 90 deg CW vs. the original layout</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>n_panel_types, n_cols <span class="op">=</span> panels.shape[<span class="dv">0</span>], panels.shape[<span class="dv">1</span>]</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>row_titles <span class="op">=</span> [</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Source $z_i$"</span>, <span class="st">"Source $z_j$"</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Recon (Original VAE)"</span>, <span class="st">"Slerp (Original VAE)"</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Recon (Fine-tuned VAE)"</span>, <span class="st">"Slerp (Fine-tuned VAE)"</span>,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(n_panel_types, n_cols, figsize<span class="op">=</span>(<span class="fl">1.83</span> <span class="op">*</span> n_cols, <span class="dv">11</span>), facecolor<span class="op">=</span><span class="st">"black"</span>)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ax, title <span class="kw">in</span> <span class="bu">zip</span>(axes[:, <span class="dv">0</span>], row_titles):</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    ax.set_ylabel(title, color<span class="op">=</span><span class="st">"white"</span>, fontsize<span class="op">=</span><span class="dv">9</span>, fontweight<span class="op">=</span><span class="st">"bold"</span>, rotation<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>                  ha<span class="op">=</span><span class="st">"right"</span>, va<span class="op">=</span><span class="st">"center"</span>, labelpad<span class="op">=</span><span class="dv">10</span>)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> row <span class="kw">in</span> <span class="bu">range</span>(n_panel_types):</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> col <span class="kw">in</span> <span class="bu">range</span>(n_cols):</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        ax <span class="op">=</span> axes[row, col]</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        ax.imshow(panels[row, col], cmap<span class="op">=</span><span class="st">"gray"</span>, vmin<span class="op">=</span><span class="dv">0</span>, vmax<span class="op">=</span><span class="dv">255</span>)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        ax.set_xticks([])<span class="op">;</span> ax.set_yticks([])</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> spine <span class="kw">in</span> ax.spines.values():</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>            spine.set_visible(<span class="va">False</span>)</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> row <span class="op">==</span> <span class="dv">3</span>:</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> spine <span class="kw">in</span> ax.spines.values():</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>                spine.set_edgecolor(<span class="st">"red"</span>)<span class="op">;</span> spine.set_linewidth(<span class="dv">2</span>)<span class="op">;</span> spine.set_visible(<span class="va">True</span>)</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>        <span class="cf">elif</span> row <span class="op">==</span> <span class="dv">5</span>:</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> spine <span class="kw">in</span> ax.spines.values():</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>                spine.set_edgecolor(<span class="st">"lime"</span>)<span class="op">;</span> spine.set_linewidth(<span class="dv">2</span>)<span class="op">;</span> spine.set_visible(<span class="va">True</span>)</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>fig.text(<span class="fl">0.5</span>, <span class="op">-</span><span class="fl">0.01</span>,</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Red border = Slerp (Original VAE, disconnected)  |  Green border = Slerp (Fine-tuned VAE, connected)"</span>,</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>         ha<span class="op">=</span><span class="st">"center"</span>, color<span class="op">=</span><span class="st">"white"</span>, fontsize<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>plt.subplots_adjust(hspace<span class="op">=</span><span class="fl">0.05</span>, wspace<span class="op">=</span><span class="fl">0.05</span>)</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div id="fig-connectivity" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-connectivity-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-connectivity-output-1.png" width="1045" height="1060" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-connectivity-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: Six pairs of CT slices (columns), decoded and slerp-interpolated through the original vs.&nbsp;fine-tuned VAE (rows). Red border = disconnected; green border = connected.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p><code>Recon</code> columns show that fine-tuning doesn’t cost reconstruction quality — both VAEs faithfully reproduce the input. The <code>Slerp</code> columns are the actual test: decode the midpoint between <span class="math inline">\(z_i\)</span> and <span class="math inline">\(z_j\)</span> with no real image ever having produced it. With the <strong>original VAE</strong>, that midpoint is visibly broken — a fine-grained checkerboard texture stamped over blurred, structurally wrong anatomy, worse the further apart the two source slices are (see column 4, where <span class="math inline">\(z_j\)</span> is a mostly-empty top-of-lung slice). With the <strong>fine-tuned VAE</strong>, the same midpoints look like plausible intermediate anatomy: coherent organ boundaries, no grid artifacts, structure that’s obviously <em>between</em> the two endpoints rather than a broken average of them. This is the failure mode the connectivity loss is directly targeting, made visible.</p>
+</section>
+<section id="did-it-work" class="level3">
+<h3 class="anchored" data-anchor-id="did-it-work">Did it work</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th>PSNR ↑</th>
+<th>rFID ↓</th>
+<th>iFID ↓</th>
+<th>Gap ↓</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Pretrained VAE</td>
+<td>37.40</td>
+<td><strong>12.30</strong></td>
+<td>67.85</td>
+<td>55.55</td>
+</tr>
+<tr class="even">
+<td>Recon only</td>
+<td>38.33</td>
+<td>16.72</td>
+<td>62.07</td>
+<td>45.35</td>
+</tr>
+<tr class="odd">
+<td>Recon + KL</td>
+<td>38.36</td>
+<td>18.09</td>
+<td>60.42</td>
+<td>42.32</td>
+</tr>
+<tr class="even">
+<td>Recon + ROI</td>
+<td>38.16</td>
+<td>16.07</td>
+<td>53.72</td>
+<td>37.65</td>
+</tr>
+<tr class="odd">
+<td>Recon + KL + ROI</td>
+<td>37.73</td>
+<td>16.67</td>
+<td>51.23</td>
+<td>34.56</td>
+</tr>
+<tr class="even">
+<td><strong>Production</strong> (all + schedules + multi-α)</td>
+<td>37.44</td>
+<td>17.39</td>
+<td><strong>39.88</strong></td>
+<td><strong>22.49</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The production configuration cuts the disconnection gap by ~60% relative to the pretrained baseline (55.55 → 22.49), at the cost of a few points of rFID — a reasonable trade given rFID measures something we don’t directly optimize for generation quality. We also looked at the distribution, not just the mean:</p>
+<div id="cell-fig-psnr-kde" class="cell" data-fig-height="5" data-fig-width="9" data-execution_count="2">
+<details class="code-fold">
+<summary>Show the plotting code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.stats <span class="im">import</span> gaussian_kde</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> np.load(<span class="st">"data/psnr_kde_values.npz"</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>RUNS <span class="op">=</span> [</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"Original VAE"</span>,     <span class="st">"Original_VAE"</span>),</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"Recon"</span>,             <span class="st">"Recon"</span>),</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"Recon + KL"</span>,        <span class="st">"Recon_plus_KL"</span>),</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"Recon + ROI"</span>,       <span class="st">"Recon_plus_ROI"</span>),</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"Recon + KL + ROI"</span>,  <span class="st">"Recon_plus_KL_plus_ROI"</span>),</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"Production"</span>,        <span class="st">"Production"</span>),</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>COLORS <span class="op">=</span> {</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Original VAE"</span>: <span class="st">"#e74c3c"</span>, <span class="st">"Recon"</span>: <span class="st">"#95a5a6"</span>, <span class="st">"Recon + KL"</span>: <span class="st">"#bdc3c7"</span>,</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Recon + ROI"</span>: <span class="st">"#7f8c8d"</span>, <span class="st">"Recon + KL + ROI"</span>: <span class="st">"#aab7b8"</span>, <span class="st">"Production"</span>: <span class="st">"#2ecc71"</span>,</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>LWIDTHS <span class="op">=</span> {k: <span class="fl">1.2</span> <span class="cf">for</span> k, _ <span class="kw">in</span> RUNS}<span class="op">;</span> LWIDTHS[<span class="st">"Original VAE"</span>] <span class="op">=</span> <span class="fl">2.2</span><span class="op">;</span> LWIDTHS[<span class="st">"Production"</span>] <span class="op">=</span> <span class="fl">2.5</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>LSTYLES <span class="op">=</span> {k: <span class="st">"--"</span> <span class="cf">for</span> k, _ <span class="kw">in</span> RUNS}<span class="op">;</span> LSTYLES[<span class="st">"Original VAE"</span>] <span class="op">=</span> <span class="st">"-"</span><span class="op">;</span> LSTYLES[<span class="st">"Production"</span>] <span class="op">=</span> <span class="st">"-"</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>all_psnrs <span class="op">=</span> {label: d[key] <span class="cf">for</span> label, key <span class="kw">in</span> RUNS}</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">5</span>))</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>x_min <span class="op">=</span> <span class="bu">min</span>(p.<span class="bu">min</span>() <span class="cf">for</span> p <span class="kw">in</span> all_psnrs.values()) <span class="op">-</span> <span class="dv">1</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>x_max <span class="op">=</span> <span class="bu">min</span>(<span class="bu">max</span>(p.<span class="bu">max</span>() <span class="cf">for</span> p <span class="kw">in</span> all_psnrs.values()) <span class="op">+</span> <span class="dv">1</span>, <span class="dv">50</span>)</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>xs <span class="op">=</span> np.linspace(x_min, x_max, <span class="dv">500</span>)</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> label, psnrs <span class="kw">in</span> all_psnrs.items():</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    kde <span class="op">=</span> gaussian_kde(psnrs, bw_method<span class="op">=</span><span class="fl">0.3</span>)</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    ys <span class="op">=</span> kde(xs)</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>    ax.plot(xs, ys, label<span class="op">=</span><span class="ss">f"</span><span class="sc">{</span>label<span class="sc">}</span><span class="ss">  (μ=</span><span class="sc">{</span>np<span class="sc">.</span>mean(psnrs)<span class="sc">:.1f}</span><span class="ss"> dB)"</span>,</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>            color<span class="op">=</span>COLORS[label], linewidth<span class="op">=</span>LWIDTHS[label], linestyle<span class="op">=</span>LSTYLES[label])</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    ax.fill_between(xs, ys, alpha<span class="op">=</span><span class="fl">0.06</span>, color<span class="op">=</span>COLORS[label])</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">"Interpolation PSNR vs Nearest Endpoint (dB)"</span>, fontsize<span class="op">=</span><span class="dv">12</span>)</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">"Density"</span>, fontsize<span class="op">=</span><span class="dv">12</span>)</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">"Latent Space Connectivity: Slerp Interpolation PSNR Distribution</span><span class="ch">\n</span><span class="st">"</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>             <span class="st">"(lower PSNR = more distinct interpolations = better connected latent space)"</span>, fontsize<span class="op">=</span><span class="dv">11</span>)</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>ax.legend(fontsize<span class="op">=</span><span class="dv">9</span>, loc<span class="op">=</span><span class="st">"upper right"</span>)</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>ax.spines[[<span class="st">"top"</span>, <span class="st">"right"</span>]].set_visible(<span class="va">False</span>)</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>ax.set_xlim(x_min, x_max)</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div id="fig-psnr-kde" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-psnr-kde-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-psnr-kde-output-1.png" width="855" height="469" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-psnr-kde-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: KDE of per-sample interpolation PSNR across VAE variants (lower = more distinct, better-connected interpolations).
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>For each validation sample, slerp it against its nearest neighbor, decode, and take the higher of its PSNR against either endpoint — <em>lower</em> PSNR means the decoded midpoint is genuinely distinct from both endpoints, not just a copy of the closer one. The production model and the pretrained VAE both have a real mass of low-PSNR (genuinely novel, non-collapsed) midpoints, while the ablation variants concentrate at higher PSNR — i.e.&nbsp;their “interpolations” are closer to just reproducing an endpoint. Schedule and multi-α mattered; none of the individual loss terms alone got us there.</p>
+</section>
+</section>
+<section id="change-2-classifier-free-guidance" class="level2">
+<h2 class="anchored" data-anchor-id="change-2-classifier-free-guidance">Change 2: classifier-free guidance</h2>
+<p>Last year’s base checkpoint was trained with <code>p_drop_conditionning: 0.0</code> — text conditioning was never dropped during training, so there’s no learned unconditional branch and no meaningful way to apply CFG at inference. This year’s spacing fine-tuning runs (both the initial round and the continuation) set <code>p_drop_conditionning: 0.1</code>, the standard 10% text-dropout rate, specifically so we’d have that capability.</p>
+<p><strong>Where this stands is an open question, not a result.</strong> We swept guidance scale at inference and didn’t see a clear, consistent improvement — sometimes better, sometimes not, nothing we could point to as a reliable win. We don’t have a solid explanation yet (interaction with the autoregressive block conditioning? the previous-block signal already gives the model plenty to condition on, diluting what dropping the <em>text</em> branch alone accomplishes?), and we didn’t have time to run it down properly this cycle. The production model ships without CFG applied at inference, even though it was trained to support it. Flagging this honestly rather than pretending it was resolved.</p>
+</section>
+<section id="the-submission-cycle-what-actually-broke" class="level2">
+<h2 class="anchored" data-anchor-id="the-submission-cycle-what-actually-broke">The submission cycle: what actually broke</h2>
+<p>Everything above was settled weeks before the deadline. The last stretch was a different kind of work — real-submission debugging under a $35-per-run cost and a hard clock, most of it self-inflicted complexity we then had to dig back out of. Every point below is a real, scored submission, not a local ablation:</p>
+<div id="cell-fig-eval-progression" class="cell" data-fig-height="5" data-fig-width="9" data-execution_count="3">
+<details class="code-fold">
+<summary>Show the plotting code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_csv(<span class="st">"data/eval_progression.csv"</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> <span class="bu">range</span>(<span class="bu">len</span>(df))</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">5</span>))</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>sizes <span class="op">=</span> df[<span class="st">"fid_avg"</span>].fillna(<span class="dv">60</span>).astype(<span class="bu">float</span>) <span class="op">*</span> <span class="dv">3</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>colors <span class="op">=</span> [<span class="st">"#e74c3c"</span> <span class="cf">if</span> <span class="st">"bug"</span> <span class="kw">in</span> n.lower() <span class="kw">or</span> <span class="st">"broken"</span> <span class="kw">in</span> n.lower() <span class="cf">else</span> <span class="st">"#2ecc71"</span> <span class="cf">if</span> <span class="st">"best"</span> <span class="kw">in</span> n.lower() <span class="cf">else</span> <span class="st">"#7f8c8d"</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> n <span class="kw">in</span> df[<span class="st">"label"</span>]]</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>ax.plot(x, df[<span class="st">"fvd"</span>], color<span class="op">=</span><span class="st">"#7f8c8d"</span>, linewidth<span class="op">=</span><span class="dv">1</span>, zorder<span class="op">=</span><span class="dv">1</span>, linestyle<span class="op">=</span><span class="st">"--"</span>)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>ax.scatter(x, df[<span class="st">"fvd"</span>], s<span class="op">=</span>sizes, c<span class="op">=</span>colors, zorder<span class="op">=</span><span class="dv">2</span>, edgecolor<span class="op">=</span><span class="st">"white"</span>, linewidth<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, row <span class="kw">in</span> df.iterrows():</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    ax.annotate(row[<span class="st">"label"</span>], (i, row[<span class="st">"fvd"</span>]), textcoords<span class="op">=</span><span class="st">"offset points"</span>,</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>                xytext<span class="op">=</span>(<span class="dv">0</span>, <span class="dv">12</span>), ha<span class="op">=</span><span class="st">"center"</span>, fontsize<span class="op">=</span><span class="dv">8</span>, wrap<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">"FVD (CTNet features, lower is better)"</span>, fontsize<span class="op">=</span><span class="dv">12</span>)</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>ax.set_xticks(<span class="bu">list</span>(x))</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>ax.set_xticklabels([<span class="ss">f"submission </span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> x], fontsize<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>ax.spines[[<span class="st">"top"</span>, <span class="st">"right"</span>]].set_visible(<span class="va">False</span>)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>ax.set_ylim(<span class="dv">0</span>, df[<span class="st">"fvd"</span>].<span class="bu">max</span>() <span class="op">*</span> <span class="fl">1.25</span>)</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div id="fig-eval-progression" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-eval-progression-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-eval-progression-output-1.png" width="853" height="469" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-eval-progression-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: FVD across the submission cycle’s real, scored runs (lower is better). Marker size ~ FID avg where available.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Green = the cycle’s best result; red = a run that scored badly for a real, identified reason; grey = intermediate points. The dip and recovery in the middle is the Dockerfile-ENV-mismatch and degenerate-candidate bugs described below; the spike on the right is the CLIP-safety-net bug, also described below — both are real regressions with real root causes, not noise.</p>
+<p><strong>The 256-frame ceiling.</strong> Our training data preprocessing center-crops every volume to 256 slices. That’s an invisible hard boundary: whatever the autoregressive model draws past 256 frames, it has <em>never seen anything like it</em> in training, regardless of prompt. An early real submission scored badly (FVD 0.53) for exactly this reason — nothing wrong with the model, we just let generation run past the one boundary that mattered. Capping <code>max_blocks</code> at 16 (16×16 = 256 frames) fixed it immediately.</p>
+<p><strong>Declared vs.&nbsp;conditioned spacing.</strong> This is a post-processing decoupling, not a learned conditioning branch — the model itself has no spacing input. We found, empirically, that treating the generation as a <em>coarser</em> z-spacing (3.0mm) than what we actually declare in the output header (1.5mm, or an adaptive value computed to keep every volume’s block at a fixed 384mm physical extent) nudges it toward more anatomically varied output — real content doesn’t get proportionally rescaled just because we relabel the header, so this is a legitimate (if slightly hacky) way to push generation out of a repetitive part of its learned distribution. This one small decoupling outperformed every geometry variant we tried against the actual challenge FID/FVD metrics.</p>
+<p><strong>A selection-method dead end.</strong> We tried scoring candidates by Mahalanobis “typicality” against the published dataset’s feature distribution and picking the most typical one. It measurably <em>hurt</em> FVD (0.24 → 0.40) — it shrinks the effective covariance of what gets published, making outputs too safe/average relative to real data’s actual spread. Good reminder that “pick the most normal-looking one” and “match the real distribution” are not the same objective.</p>
+<p><strong>A seed bug that only showed up in retrospect.</strong> Our candidate-diversity scheme used seeds of the form <code>base + 977*k</code>. For <code>k = 1..4</code>, this combination deterministically triggered the model’s early-stop condition on the very first block, <em>regardless of prompt content</em> — confirmed by testing the same seeds against four different real reports. For most of the cycle this silently made our “5 diverse candidates” selection effectively “1 real candidate + 4 immediate no-ops,” which we didn’t catch because the no-ops get filtered out before scoring, so nothing looked obviously wrong. We replaced the formula with a small pool of seeds individually verified non-degenerate across multiple real prompts.</p>
+<p><strong>A safety net that silently never ran.</strong> We added a CT-CLIP-based quality check late in the cycle: score the selected candidate against its own report text, and if it scores below 0.5, redraw with a backup seed pool and take whichever of the combined pool scores highest — a real guardrail against selecting an anatomically-plausible-but-semantically- wrong candidate. It worked in every local test. It did not work in the actual submission: the vendored CT-CLIP source has its own hardcoded <code>BertTokenizer.from_pretrained('microsoft/BiomedVLP-CXR-BERT-specialized')</code> call, buried inside the model class constructor, completely independent of the local path we were correctly passing everywhere else. Local testing has internet access, so that line quietly succeeded by phoning home to the Hub; the actual submission container runs fully offline (<code>TRANSFORMERS_OFFLINE=1</code>), where it failed, got caught by an exception handler, and the whole safety net silently no-op’d for the entire 100-prompt run — CLIP scores were computed, thresholds checked, nothing printed to indicate anything was wrong, because “print nothing extra” was exactly what the success path did too. One submission’s worth of real compute spent validating a component that had never actually run once. Fixed by pointing that specific line at the local path when it exists, falling back to the Hub id otherwise.</p>
+<p><strong>Compile mode was the wrong tool for this workload.</strong> Once the CLIP safety net actually started firing, retries meant redrawing at a different batch size than the main pass, and every new autoregressive block length is technically a new tensor shape. We’d been compiling with <code>mode="max-autotune-no-cudagraphs"</code>, which exhaustively benchmarks several kernel candidates per operator <em>every time it meets a shape it hasn’t seen</em> — fine if you run the same few shapes thousands of times, actively expensive if your workload naturally produces a wide spread of shapes and hits each only a handful of times, which describes variable-length autoregressive generation pretty exactly. Dropping to default compile mode barely moved single-call latency (~2%); the retry pool size mattered far more — cutting it from 5 seeds to 2 (and resolving retries by taking the best-CLIP candidate across the combined pool directly, instead of re-running the whole jerk-median selection a second time) cut total wall-clock by about a third in controlled, same-environment comparisons.</p>
+</section>
+<section id="where-it-landed-and-whats-still-open" class="level2">
+<h2 class="anchored" data-anchor-id="where-it-landed-and-whats-still-open">Where it landed, and what’s still open</h2>
+<p>Best real result this cycle: FVD 0.239, a meaningful improvement over our own earlier submissions and over the naive-typicality-selection variant. A few things are deliberately left unresolved rather than overclaimed:</p>
+<ul>
+<li>The spacing fine-tune was run in two rounds (a second continuation on top of the first checkpoint), and round 2 was adopted as the default early in the cycle without ever being A/B tested against round 1 alone.</li>
+<li>CFG training capability exists; inference-time benefit doesn’t, and we don’t yet know why.</li>
+<li>The retry pool was cut from 5 to 2 seeds under real time pressure, on the reasoning that the winning seed in our test cases was already in the smaller pool — true in the cases we checked, not something we validated at scale before the final submission.</li>
+</ul>
+</section>
+<section id="links" class="level2">
+<h2 class="anchored" data-anchor-id="links">Links</h2>
+<ul>
+<li>Model + inference pipeline + the exact submitted container: <a href="https://huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026">huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026</a></li>
+<li>Training code (this repo, no weights): <a href="training/"><code>training/</code></a></li>
+<li>Synthetic CT-RATE validation set (1,516 unique reports, one generation each): <em>link to follow once the run finishes.</em></li>
+</ul>
+</section>
+<section id="citation" class="level2">
+<h2 class="anchored" data-anchor-id="citation">Citation</h2>
+<p>If you use CTFlow, the fine-tuned VAE, or this write-up, please cite the base paper and, for this year’s system specifically, this repository:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bibtex code-with-copy"><code class="sourceCode bibtex"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="va">@article</span>{<span class="ot">wang2025ctflow</span>,</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">title</span>   = {CTFlow: Video-Inspired Latent Flow Matching for 3D CT Synthesis},</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">author</span>  = {Wang, Jiayi and Reynaud, Hadrien and Erick, Franciskus Xaverius and Kainz, Bernhard},</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">journal</span> = {arXiv preprint arXiv:2508.12900},</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">year</span>    = {2025}</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="va">@misc</span>{<span class="ot">wang2026ctflowv2</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">title</span>        = {CTFlow v2: VLM3D 2026 Submission},</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">author</span>       = {Wang, Jiayi and Reynaud, Hadrien and N<span class="ch">\"</span>{u}tzel, Felix and Durug<span class="ch">\"</span>{o}l, <span class="ch">\"</span>{O}mer Faruk and Spasojevic, Teodora and Hagen, Luca and Kainz, Bernhard},</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">year</span>         = {2026},</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">howpublished</span> = {<span class="ch">\url</span>{https://github.com/WongJiayi/CTFlow-v2}},</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">note</span>         = {Model weights and inference code: <span class="ch">\url</span>{https://huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026}}</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

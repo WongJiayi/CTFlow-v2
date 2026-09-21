@@ -279,41 +279,72 @@ submission, not a local ablation:
 
 ```{python}
 #| label: fig-eval-progression
-#| fig-cap: "FVD across the submission cycle's real, scored runs (lower is better). Marker size ~ FID avg where available."
-#| fig-width: 9
-#| fig-height: 5
+#| fig-cap: "All three challenge metrics across the submission cycle's real, scored runs. FVD/FID lower is better; CLIP higher is better. FID/CLIP were only logged from the point we started tracking them per-submission."
+#| fig-width: 12
+#| fig-height: 4.2
 
 import pandas as pd
 
 df = pd.read_csv("data/eval_progression.csv")
 x = range(len(df))
-
-fig, ax = plt.subplots(figsize=(9, 5))
-sizes = df["fid_avg"].fillna(60).astype(float) * 3
 colors = ["#e74c3c" if "bug" in n.lower() or "broken" in n.lower() else "#2ecc71" if "best" in n.lower() else "#7f8c8d"
           for n in df["label"]]
-ax.plot(x, df["fvd"], color="#7f8c8d", linewidth=1, zorder=1, linestyle="--")
-ax.scatter(x, df["fvd"], s=sizes, c=colors, zorder=2, edgecolor="white", linewidth=0.5)
 
-for i, row in df.iterrows():
-    ax.annotate(row["label"], (i, row["fvd"]), textcoords="offset points",
-                xytext=(0, 12), ha="center", fontsize=8, wrap=True)
+metrics = [
+    ("fvd",      "FVD  (↓ better)"),
+    ("fid_avg",  "FID avg  (↓ better)"),
+    ("clip_avg", "CT-CLIPScore avg  (↑ better)"),
+]
 
-ax.set_ylabel("FVD (CTNet features, lower is better)", fontsize=12)
-ax.set_xticks(list(x))
-ax.set_xticklabels([f"submission {i+1}" for i in x], fontsize=9)
-ax.spines[["top", "right"]].set_visible(False)
-ax.set_ylim(0, df["fvd"].max() * 1.25)
+fig, axes = plt.subplots(1, 3, figsize=(12, 4.2))
+for ax, (col, ylabel) in zip(axes, metrics):
+    vals = df[col]
+    have = vals.notna()
+    ax.plot(list(x), vals, color="#7f8c8d", linewidth=1, zorder=1, linestyle="--")
+    ax.scatter([i for i in x if have[i]], vals[have], s=140,
+               c=[colors[i] for i in x if have[i]], zorder=2,
+               edgecolor="white", linewidth=0.5)
+    ax.set_ylabel(ylabel, fontsize=10)
+    ax.set_xticks(list(x))
+    ax.set_xticklabels([str(i + 1) for i in x], fontsize=9)
+    ax.set_xlabel("submission #", fontsize=9)
+    ax.spines[["top", "right"]].set_visible(False)
+    lo, hi = vals.min(), vals.max()
+    pad = (hi - lo) * 0.3 if hi > lo else hi * 0.1
+    ax.set_ylim(max(0, lo - pad), hi + pad)
+
+fig.legend(handles=[
+    plt.Line2D([0], [0], marker="o", color="w", markerfacecolor="#2ecc71", markersize=10, label="best result"),
+    plt.Line2D([0], [0], marker="o", color="w", markerfacecolor="#e74c3c", markersize=10, label="scored badly (known bug)"),
+    plt.Line2D([0], [0], marker="o", color="w", markerfacecolor="#7f8c8d", markersize=10, label="intermediate"),
+], loc="upper center", bbox_to_anchor=(0.5, 1.12), ncol=3, fontsize=9, frameon=False)
 plt.tight_layout()
 plt.show()
 ```
 
-Green = the cycle's best result; red = a run that scored badly for a
-real, identified reason; grey = intermediate points. The dip and
-recovery in the middle is the Dockerfile-ENV-mismatch and
-degenerate-candidate bugs described below; the spike on the right is the
-CLIP-safety-net bug, also described below — both are real regressions
-with real root causes, not noise.
+```{python}
+#| echo: false
+from IPython.display import Markdown
+tbl = df[["label", "fvd", "fid_avg", "clip_avg"]].rename(
+    columns={"label": "Submission", "fvd": "FVD", "fid_avg": "FID avg", "clip_avg": "CLIP avg"})
+tbl.insert(0, "#", range(1, len(tbl) + 1))
+Markdown(tbl.to_markdown(index=False, floatfmt=".2f"))
+```
+
+Green = the cycle's best FVD; red = a run that scored badly for a real,
+identified reason; grey = intermediate points. FID and CLIP weren't
+logged for the first three runs (before we started tracking per-metric
+scores per submission), so those two panels only show the last two.
+That's also the point worth making explicitly: FVD alone makes the last
+submission look like a step backward from the session best, but FID
+barely moved (90.2 → 92.9) and CLIP actually *improved slightly*
+(28.5 → 29.7) — the regression is concentrated in FVD specifically,
+consistent with the root cause (a diagnostic, feature-space-distribution
+issue caused by the broken CLIP safety net) rather than a wholesale
+quality collapse. The dip and recovery in the middle of the FVD panel is
+the Dockerfile-ENV-mismatch and degenerate-candidate bugs described
+below; the spike on the right is the CLIP-safety-net bug, also described
+below — both are real regressions with real root causes, not noise.
 
 **The 256-frame ceiling.** Our training data preprocessing center-crops
 every volume to 256 slices. That's an invisible hard boundary: whatever

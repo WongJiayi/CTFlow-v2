@@ -24,8 +24,8 @@ before the deadline. Both halves are worth writing down.
 
 Links: [model + inference code](https://huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026)
 · [training code](training/) (this repo, no weights)
-· synthetic dataset (link added once the generation run finishes — see the
-end of this post).
+· [synthetic dataset](https://huggingface.co/datasets/EnyaWoooo/ctflowv2-synthetic-ctrate-valid)
+(1,516 volumes, 243GB).
 
 Every figure below (VAE connectivity grid, PSNR-KDE plot, and the
 submission-score chart) is a live matplotlib cell reading from the small
@@ -546,11 +546,10 @@ left unresolved rather than overclaimed:
 
 ## A few generated volumes
 
-Six real outputs from the synthetic CT-RATE validation run (soft-tissue
-window, scrolling axial view, one clip per report). No cherry-picking
-beyond "the run had gotten far enough to produce them" at the time this
-post was written — the full 1,516-volume set is linked below once it
-finishes.
+Six of the 1,516 outputs from the synthetic CT-RATE validation run
+(full HU window, scrolling axial view, one clip per report), picked
+before the run finished rather than after — no cherry-picking based on
+how any individual volume turned out. The full set is linked below.
 
 ```{=html}
 <style>
@@ -593,7 +592,8 @@ finishes.
   [huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026](https://huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026)
 - Training code (this repo, no weights): [`training/`](training/)
 - Synthetic CT-RATE validation set (1,516 unique reports, one generation
-  each): *link to follow once the run finishes.*
+  each, 243GB):
+  [huggingface.co/datasets/EnyaWoooo/ctflowv2-synthetic-ctrate-valid](https://huggingface.co/datasets/EnyaWoooo/ctflowv2-synthetic-ctrate-valid)
 
 ## Citation
 

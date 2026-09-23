@@ -170,7 +170,7 @@ window.Quarto = {
 
 
 <p>This is a retrospective on our second submission to the VLM3D / CT-RATE text-to-CT challenge — a text-conditioned generative model that turns a radiology report into a synthetic chest CT volume. Last year’s system worked. This year we changed the two things we thought were actually limiting it — the VAE and classifier-free guidance — and then spent the final submission cycle finding and fixing a long list of unglamorous bugs before the deadline. Both halves are worth writing down.</p>
-<p>Links: <a href="https://huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026">model + inference code</a> · <a href="training/">training code</a> (this repo, no weights) · synthetic dataset (link added once the generation run finishes — see the end of this post).</p>
+<p>Links: <a href="https://huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026">model + inference code</a> · <a href="training/">training code</a> (this repo, no weights) · <a href="https://huggingface.co/datasets/EnyaWoooo/ctflowv2-synthetic-ctrate-valid">synthetic dataset</a> (1,516 volumes, 243GB).</p>
 <p>Every figure below (VAE connectivity grid, PSNR-KDE plot, and the submission-score chart) is a live matplotlib cell reading from the small cached arrays in <code>data/</code> — click “Show the plotting code” on any of them to see exactly how it’s drawn.</p>
 <section id="summary-before-the-details" class="level2">
 <h2 class="anchored" data-anchor-id="summary-before-the-details">Summary, before the details</h2>
@@ -461,7 +461,7 @@ Figure&nbsp;3: All three challenge metrics across the submission cycle’s real,
 </div>
 </div>
 </div>
-<div id="7940c70f" class="cell" data-execution_count="4">
+<div id="ff89f9b3" class="cell" data-execution_count="4">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="4">
 <table class="caption-top table table-sm table-striped small">
 <colgroup>
@@ -569,7 +569,7 @@ Figure&nbsp;3: All three challenge metrics across the submission cycle’s real,
 </section>
 <section id="a-few-generated-volumes" class="level2">
 <h2 class="anchored" data-anchor-id="a-few-generated-volumes">A few generated volumes</h2>
-<p>Six real outputs from the synthetic CT-RATE validation run (soft-tissue window, scrolling axial view, one clip per report). No cherry-picking beyond “the run had gotten far enough to produce them” at the time this post was written — the full 1,516-volume set is linked below once it finishes.</p>
+<p>Six of the 1,516 outputs from the synthetic CT-RATE validation run (full HU window, scrolling axial view, one clip per report), picked before the run finished rather than after — no cherry-picking based on how any individual volume turned out. The full set is linked below.</p>
 <style>
 .demo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 1.2em 0; }
 .demo-grid figure { margin: 0; }
@@ -608,7 +608,7 @@ Figure&nbsp;3: All three challenge metrics across the submission cycle’s real,
 <ul>
 <li>Model + inference pipeline + the exact submitted container: <a href="https://huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026">huggingface.co/EnyaWoooo/ctflowv2-vlm3d2026</a></li>
 <li>Training code (this repo, no weights): <a href="training/"><code>training/</code></a></li>
-<li>Synthetic CT-RATE validation set (1,516 unique reports, one generation each): <em>link to follow once the run finishes.</em></li>
+<li>Synthetic CT-RATE validation set (1,516 unique reports, one generation each, 243GB): <a href="https://huggingface.co/datasets/EnyaWoooo/ctflowv2-synthetic-ctrate-valid">huggingface.co/datasets/EnyaWoooo/ctflowv2-synthetic-ctrate-valid</a></li>
 </ul>
 </section>
 <section id="citation" class="level2">
